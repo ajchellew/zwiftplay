@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Zwift Play Host</string>
+
+    <string name="service_notification_channel_name">Service</string>
+    <string name="service_notification_channel_summary">Notifications about the BLE service</string>
+    <string name="right">Right:</string>
+    <string name="left">Left:</string>
+</resources>

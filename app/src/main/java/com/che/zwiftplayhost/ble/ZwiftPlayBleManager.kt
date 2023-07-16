@@ -27,7 +27,7 @@ import no.nordicsemi.android.ble.BleManager
 import no.nordicsemi.android.ble.data.Data
 import java.nio.ByteBuffer
 
-class ZwiftPlayBleManager(context: Context) : BleManager(context) {
+class ZwiftPlayBleManager(context: Context, private val isLeft: Boolean) : BleManager(context) {
 
     companion object {
         private const val TAG = "ZwiftPlayBleManager"
@@ -101,7 +101,7 @@ class ZwiftPlayBleManager(context: Context) : BleManager(context) {
 
     override fun initialize() {
 
-        Logger.d(TAG, "Initialize")
+        Logger.d(TAG, "Initialize ${if (isLeft) "Left" else "Right"} Controller")
 
         setIndicationCallback(serviceChangedCharacteristic).with { _, data ->
             getHexStringValue(data)?.let {

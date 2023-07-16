@@ -17,6 +17,7 @@ import android.os.IBinder
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE
+import androidx.core.util.isEmpty
 import com.che.zwiftplayhost.R
 import com.che.zwiftplayhost.ble.BleControllerScanner
 import com.che.zwiftplayhost.ble.ZwiftPlayBleManager
@@ -34,6 +35,9 @@ class BluetoothService : Service() {
         private const val TAG = "GattService"
 
         const val DATA_PLANE_ACTION = "DataPlane"
+
+        private const val RC1_LEFT_SIDE: Byte = 3
+        private const val RC1_RIGHT_SIDE: Byte = 2
     }
 
     private val defaultScope = CoroutineScope(Dispatchers.Default)
@@ -67,7 +71,7 @@ class BluetoothService : Service() {
             override fun onResult(scanResult: ScanResult) {
                 //Logger.d(TAG, "Found BLE device ${scanResult.device.address}")
                 synchronized(clientManagers) {
-                    addDevice(scanResult.device)
+                    addDeviceFromScan(scanResult)
                     // if we find both controllers, stop scanning
                     if (clientManagers.size == 2)
                         bleScanner.stop()
@@ -151,10 +155,26 @@ class BluetoothService : Service() {
         clientManagers.clear()
     }
 
-    private fun addDevice(device: BluetoothDevice) {
+    private fun addDeviceFromScan(scanResult: ScanResult) {
+
+        if (scanResult.scanRecord == null) return
+
+        val device = scanResult.device
+
         if (!clientManagers.containsKey(device.address)) {
             Logger.d(TAG, "Connecting ${device.address}")
-            val clientManager = ZwiftPlayBleManager(this)
+
+            val manData = scanResult.scanRecord!!.manufacturerSpecificData
+            if (manData == null || manData.isEmpty()) return
+
+            // 2378 is the value in the manufacturer data
+            val data = scanResult.scanRecord?.getManufacturerSpecificData(2378) ?: return
+
+            // We expect a device of BrevetDeviceType.RC1 which is 2 or 3 depending on which side it is
+            val typeByte = data[0]
+            if (typeByte != RC1_LEFT_SIDE && typeByte != RC1_RIGHT_SIDE) return
+
+            val clientManager = ZwiftPlayBleManager(this, typeByte == RC1_LEFT_SIDE)
             clientManager.connect(device).useAutoConnect(true).enqueue()
             clientManagers[device.address] = clientManager
         }

@@ -12,6 +12,9 @@ object ZwiftPlayProfile {
     val DEVICE_NAME_CHARACTERISTIC_UUID =  uuidFromShortString("2A00") // Zwift Play
     val APPEARANCE_CHARACTERISTIC_UUID =  uuidFromShortString("2A01") // [964] Gamepad (HID Subtype)
 
+    val GENERIC_ATTRIBUTE_SERVICE_UUID = uuidFromShortString("1801")
+    val SERVICE_CHANGED_CHARACTERISTIC_UUID =  uuidFromShortString("2A05")
+
     val DEVICE_INFORMATION_SERVICE_UUID =  uuidFromShortString("180A")
     val MANUFACTURER_NAME_STRING_CHARACTERISTIC_UUID =  uuidFromShortString("2A29")  // Zwift Inc.
     val SERIAL_NUMBER_STRING_CHARACTERISTIC_UUID =  uuidFromShortString("2A25") // 02-1[MAC]
@@ -30,10 +33,10 @@ object ZwiftPlayProfile {
 
 object BleUuids {
 
-    private const val STANDARD_BT_UUID_PREFIX = "0000"
-    private const val STANDARD_BT_UUID_SUFFIX = "-0000-1000-8000-00805F9B34FB"
+    private const val BT_SIG_UUID_PREFIX = "0000"
+    private const val BT_SIG_UUID_SUFFIX = "-0000-1000-8000-00805F9B34FB"
 
     fun uuidFromShortString(shortUuid: String): UUID {
-        return UUID.fromString("$STANDARD_BT_UUID_PREFIX$shortUuid$STANDARD_BT_UUID_SUFFIX")
+        return UUID.fromString("$BT_SIG_UUID_PREFIX$shortUuid$BT_SIG_UUID_SUFFIX")
     }
 }

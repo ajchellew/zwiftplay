@@ -22,8 +22,9 @@ object NotificationHelper {
         val notificationChannel = NotificationChannel(
             SERVICE_CHANNEL_ID,
             context.resources.getString(R.string.service_notification_channel_name),
-            NotificationManager.IMPORTANCE_DEFAULT
+            NotificationManager.IMPORTANCE_LOW
         )
+        notificationChannel.enableVibration(false)
         notificationService.createNotificationChannel(notificationChannel)
     }
 

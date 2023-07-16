@@ -5,10 +5,14 @@ import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
 import android.content.Context
 import android.util.Log
+import com.che.zwiftplayhost.ble.ZwiftPlayProfile.APPEARANCE_CHARACTERISTIC_UUID
 import com.che.zwiftplayhost.ble.ZwiftPlayProfile.BATTERY_LEVEL_CHARACTERISTIC_UUID
 import com.che.zwiftplayhost.ble.ZwiftPlayProfile.BATTERY_SERVICE_UUID
 import com.che.zwiftplayhost.ble.ZwiftPlayProfile.DEVICE_INFORMATION_SERVICE_UUID
+import com.che.zwiftplayhost.ble.ZwiftPlayProfile.DEVICE_NAME_CHARACTERISTIC_UUID
 import com.che.zwiftplayhost.ble.ZwiftPlayProfile.FIRMWARE_REVISION_STRING_CHARACTERISTIC_UUID
+import com.che.zwiftplayhost.ble.ZwiftPlayProfile.GENERIC_ACCESS_SERVICE_UUID
+import com.che.zwiftplayhost.ble.ZwiftPlayProfile.GENERIC_ATTRIBUTE_SERVICE_UUID
 import com.che.zwiftplayhost.ble.ZwiftPlayProfile.HARDWARE_REVISION_STRING_CHARACTERISTIC_UUID
 import com.che.zwiftplayhost.ble.ZwiftPlayProfile.MANUFACTURER_NAME_STRING_CHARACTERISTIC_UUID
 import com.che.zwiftplayhost.ble.ZwiftPlayProfile.PLAY_CONTROLLER_SERVICE_UUID
@@ -17,6 +21,7 @@ import com.che.zwiftplayhost.ble.ZwiftPlayProfile.PLAY_CONTROLLER_UNKNOWN_CHARAC
 import com.che.zwiftplayhost.ble.ZwiftPlayProfile.PLAY_CONTROLLER_UNKNOWN_CHARACTERISTIC_4_UUID
 import com.che.zwiftplayhost.ble.ZwiftPlayProfile.PLAY_CONTROLLER_UNKNOWN_CHARACTERISTIC_6_UUID
 import com.che.zwiftplayhost.ble.ZwiftPlayProfile.SERIAL_NUMBER_STRING_CHARACTERISTIC_UUID
+import com.che.zwiftplayhost.ble.ZwiftPlayProfile.SERVICE_CHANGED_CHARACTERISTIC_UUID
 import com.che.zwiftplayhost.utils.Logger
 import no.nordicsemi.android.ble.BleManager
 import no.nordicsemi.android.ble.data.Data
@@ -27,6 +32,11 @@ class ZwiftPlayBleManager(context: Context) : BleManager(context) {
     companion object {
         private const val TAG = "ZwiftPlayBleManager"
     }
+
+    private var deviceNameCharacteristic: BluetoothGattCharacteristic? = null
+    private var appearanceCharacteristic: BluetoothGattCharacteristic? = null
+
+    private var serviceChangedCharacteristic: BluetoothGattCharacteristic? = null
 
     private var manufacturerCharacteristic: BluetoothGattCharacteristic? = null
     private var serialCharacteristic: BluetoothGattCharacteristic? = null
@@ -42,7 +52,16 @@ class ZwiftPlayBleManager(context: Context) : BleManager(context) {
 
     override fun isRequiredServiceSupported(gatt: BluetoothGatt): Boolean {
 
-        // ignoring generic service at least for now
+        val genericAccessService = gatt.getService(GENERIC_ACCESS_SERVICE_UUID)
+        if (genericAccessService != null) {
+            deviceNameCharacteristic = genericAccessService.getCharacteristic(DEVICE_NAME_CHARACTERISTIC_UUID)
+            appearanceCharacteristic = genericAccessService.getCharacteristic(APPEARANCE_CHARACTERISTIC_UUID)
+        }
+
+        val genericAttributeService = gatt.getService(GENERIC_ATTRIBUTE_SERVICE_UUID)
+        if (genericAttributeService != null) {
+            serviceChangedCharacteristic = genericAttributeService.getCharacteristic(SERVICE_CHANGED_CHARACTERISTIC_UUID)
+        }
 
         val deviceInfoService = gatt.getService(DEVICE_INFORMATION_SERVICE_UUID)
         if (deviceInfoService != null) {
@@ -66,36 +85,45 @@ class ZwiftPlayBleManager(context: Context) : BleManager(context) {
             batteryCharacteristic = batteryService.getCharacteristic(BATTERY_LEVEL_CHARACTERISTIC_UUID)
         }
 
+        val serviceChangedValid = serviceChangedCharacteristic != null && (serviceChangedCharacteristic!!.properties and BluetoothGattCharacteristic.PROPERTY_INDICATE != 0)
+
+        val controller2Valid = controller2Characteristic != null && (controller2Characteristic!!.properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY != 0)
+        val controller4Valid = controller4Characteristic != null && (controller4Characteristic!!.properties and BluetoothGattCharacteristic.PROPERTY_INDICATE != 0)
+        val controller6Valid = controller6Characteristic != null && (controller6Characteristic!!.properties and BluetoothGattCharacteristic.PROPERTY_INDICATE != 0)
+
         val batteryValid = batteryCharacteristic != null && (batteryCharacteristic!!.properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY != 0)
 
-        return manufacturerCharacteristic != null && serialCharacteristic != null
+        return deviceNameCharacteristic != null && appearanceCharacteristic != null
+                && serviceChangedValid
+                && manufacturerCharacteristic != null && serialCharacteristic != null
                 && hardwareRevisionCharacteristic != null && softwareRevisionCharacteristic != null
-                && controller2Characteristic != null && controller3Characteristic != null && controller4Characteristic != null
-                && controller6Characteristic != null
-                && batteryValid
-
-        /*val myCharacteristicProperties = myCharacteristic?.properties ?: 0
-        return (myCharacteristicProperties and BluetoothGattCharacteristic.PROPERTY_READ != 0) &&
-                (myCharacteristicProperties and BluetoothGattCharacteristic.PROPERTY_NOTIFY != 0)*/
+                && controller2Valid && controller3Characteristic != null && controller4Valid
+                && controller6Valid && batteryValid
     }
 
     override fun initialize() {
 
         Logger.d(TAG, "Initialize")
 
+        setIndicationCallback(serviceChangedCharacteristic).with { _, data ->
+            getHexStringValue(data)?.let {
+                Logger.d(TAG, "Service Changed $it")
+            }
+        }
+
         setNotificationCallback(controller2Characteristic).with { _, data ->
-            getStringValue(data)?.let {
+            getHexStringValue(data)?.let {
                 Logger.d(TAG, "2 $it")
             }
         }
 
         setIndicationCallback(controller4Characteristic).with { _, data ->
-            getStringValue(data)?.let {
+            getHexStringValue(data)?.let {
                 Logger.d(TAG, "4 $it")
             }
         }
         setIndicationCallback(controller6Characteristic).with { _, data ->
-            getStringValue(data)?.let {
+            getHexStringValue(data)?.let {
                 Logger.d(TAG, "6 $it")
             }
         }
@@ -107,6 +135,9 @@ class ZwiftPlayBleManager(context: Context) : BleManager(context) {
         }
 
         beginAtomicRequestQueue()
+            .add(enableIndications(serviceChangedCharacteristic)
+                .fail { _: BluetoothDevice?, status: Int -> failCallback(status) }
+            )
             .add(enableNotifications(controller2Characteristic)
                 .fail { _: BluetoothDevice?, status: Int -> failCallback(status) }
             )
@@ -119,6 +150,16 @@ class ZwiftPlayBleManager(context: Context) : BleManager(context) {
             .add(enableNotifications(batteryCharacteristic)
                 .fail { _: BluetoothDevice?, status: Int -> failCallback(status) }
             )
+            .add(readCharacteristic(deviceNameCharacteristic).with { _, data ->
+                getStringValue(data)?.let {
+                    Logger.d(TAG, "Device Name: $it")
+                }
+            })
+            .add(readCharacteristic(appearanceCharacteristic).with { _, data ->
+                getHexStringValue(data)?.let {
+                    Logger.d(TAG, "Appearance: $it")
+                }
+            })
             .add(readCharacteristic(manufacturerCharacteristic).with { _, data ->
                 getStringValue(data)?.let {
                     Logger.d(TAG, "Manufacturer: $it")
@@ -146,12 +187,12 @@ class ZwiftPlayBleManager(context: Context) : BleManager(context) {
             })
 
             .add(readCharacteristic(controller4Characteristic).with { _, data ->
-                getStringValue(data)?.let {
+                getHexStringValue(data)?.let {
                     Logger.d(TAG, "4: $it")
                 }
             })
             .add(readCharacteristic(controller6Characteristic).with { _, data ->
-                getStringValue(data)?.let {
+                getHexStringValue(data)?.let {
                     Logger.d(TAG, "6: $it")
                 }
             })
@@ -160,6 +201,13 @@ class ZwiftPlayBleManager(context: Context) : BleManager(context) {
                 Logger.d(TAG, "Initialisation Complete")
             }
             .enqueue()
+    }
+
+    private fun getHexStringValue(data: Data): String? {
+        data.value?.let {
+            return it.toHexString()
+        }
+        return null
     }
 
     private fun getStringValue(data: Data): String? {
@@ -187,6 +235,12 @@ class ZwiftPlayBleManager(context: Context) : BleManager(context) {
     }
 
     override fun onServicesInvalidated() {
+
+        deviceNameCharacteristic = null
+        appearanceCharacteristic = null
+
+        serviceChangedCharacteristic = null
+
         manufacturerCharacteristic = null
         serialCharacteristic = null
         hardwareRevisionCharacteristic = null
@@ -199,4 +253,12 @@ class ZwiftPlayBleManager(context: Context) : BleManager(context) {
 
         batteryCharacteristic = null
     }
+}
+
+const val PREFIX = "0x"
+private fun ByteArray.toHexString(): String {
+    val result = asUByteArray().joinToString(" $PREFIX", prefix = PREFIX, postfix = " ") { it.toString(16).uppercase().padStart(2, '0') }
+    if (result != "$PREFIX ")
+        return result
+    return ""
 }

@@ -15,11 +15,11 @@ import com.che.zwiftplayhost.ble.ZwiftPlayProfile.GENERIC_ACCESS_SERVICE_UUID
 import com.che.zwiftplayhost.ble.ZwiftPlayProfile.GENERIC_ATTRIBUTE_SERVICE_UUID
 import com.che.zwiftplayhost.ble.ZwiftPlayProfile.HARDWARE_REVISION_STRING_CHARACTERISTIC_UUID
 import com.che.zwiftplayhost.ble.ZwiftPlayProfile.MANUFACTURER_NAME_STRING_CHARACTERISTIC_UUID
-import com.che.zwiftplayhost.ble.ZwiftPlayProfile.PLAY_CONTROLLER_SERVICE_UUID
-import com.che.zwiftplayhost.ble.ZwiftPlayProfile.PLAY_CONTROLLER_UNKNOWN_CHARACTERISTIC_2_UUID
-import com.che.zwiftplayhost.ble.ZwiftPlayProfile.PLAY_CONTROLLER_UNKNOWN_CHARACTERISTIC_3_UUID
-import com.che.zwiftplayhost.ble.ZwiftPlayProfile.PLAY_CONTROLLER_UNKNOWN_CHARACTERISTIC_4_UUID
-import com.che.zwiftplayhost.ble.ZwiftPlayProfile.PLAY_CONTROLLER_UNKNOWN_CHARACTERISTIC_6_UUID
+import com.che.zwiftplayhost.ble.ZwiftPlayProfile.ZWIFT_CUSTOM_SERVICE_UUID
+import com.che.zwiftplayhost.ble.ZwiftPlayProfile.ZWIFT_ASYNC_CHARACTERISTIC_UUID
+import com.che.zwiftplayhost.ble.ZwiftPlayProfile.ZWIFT_SYNC_RX_CHARACTERISTIC_UUID
+import com.che.zwiftplayhost.ble.ZwiftPlayProfile.ZWIFT_SYNC_TX_CHARACTERISTIC_UUID
+import com.che.zwiftplayhost.ble.ZwiftPlayProfile.ZWIFT_UNKNOWN_6_CHARACTERISTIC_UUID
 import com.che.zwiftplayhost.ble.ZwiftPlayProfile.SERIAL_NUMBER_STRING_CHARACTERISTIC_UUID
 import com.che.zwiftplayhost.ble.ZwiftPlayProfile.SERVICE_CHANGED_CHARACTERISTIC_UUID
 import com.che.zwiftplayhost.utils.Logger
@@ -43,10 +43,10 @@ class ZwiftPlayBleManager(context: Context) : BleManager(context) {
     private var hardwareRevisionCharacteristic: BluetoothGattCharacteristic? = null
     private var softwareRevisionCharacteristic: BluetoothGattCharacteristic? = null
 
-    private var controller2Characteristic: BluetoothGattCharacteristic? = null
-    private var controller3Characteristic: BluetoothGattCharacteristic? = null
-    private var controller4Characteristic: BluetoothGattCharacteristic? = null
-    private var controller6Characteristic: BluetoothGattCharacteristic? = null
+    private var asyncCharacteristic: BluetoothGattCharacteristic? = null
+    private var syncRxCharacteristic: BluetoothGattCharacteristic? = null
+    private var syncTxCharacteristic: BluetoothGattCharacteristic? = null
+    private var unknown6Characteristic: BluetoothGattCharacteristic? = null
 
     private var batteryCharacteristic: BluetoothGattCharacteristic? = null
 
@@ -71,13 +71,13 @@ class ZwiftPlayBleManager(context: Context) : BleManager(context) {
             softwareRevisionCharacteristic = deviceInfoService.getCharacteristic(FIRMWARE_REVISION_STRING_CHARACTERISTIC_UUID)
         }
 
-        val controllerService = gatt.getService(PLAY_CONTROLLER_SERVICE_UUID)
+        val controllerService = gatt.getService(ZWIFT_CUSTOM_SERVICE_UUID)
         if (controllerService != null) {
             //debugPrintBluetoothService("PlayController", controllerService)
-            controller2Characteristic = controllerService.getCharacteristic(PLAY_CONTROLLER_UNKNOWN_CHARACTERISTIC_2_UUID)
-            controller3Characteristic = controllerService.getCharacteristic(PLAY_CONTROLLER_UNKNOWN_CHARACTERISTIC_3_UUID)
-            controller4Characteristic = controllerService.getCharacteristic(PLAY_CONTROLLER_UNKNOWN_CHARACTERISTIC_4_UUID)
-            controller6Characteristic = controllerService.getCharacteristic(PLAY_CONTROLLER_UNKNOWN_CHARACTERISTIC_6_UUID)
+            asyncCharacteristic = controllerService.getCharacteristic(ZWIFT_ASYNC_CHARACTERISTIC_UUID)
+            syncRxCharacteristic = controllerService.getCharacteristic(ZWIFT_SYNC_RX_CHARACTERISTIC_UUID)
+            syncTxCharacteristic = controllerService.getCharacteristic(ZWIFT_SYNC_TX_CHARACTERISTIC_UUID)
+            unknown6Characteristic = controllerService.getCharacteristic(ZWIFT_UNKNOWN_6_CHARACTERISTIC_UUID)
         }
 
         val batteryService = gatt.getService(BATTERY_SERVICE_UUID)
@@ -87,18 +87,16 @@ class ZwiftPlayBleManager(context: Context) : BleManager(context) {
 
         val serviceChangedValid = serviceChangedCharacteristic != null && (serviceChangedCharacteristic!!.properties and BluetoothGattCharacteristic.PROPERTY_INDICATE != 0)
 
-        val controller2Valid = controller2Characteristic != null && (controller2Characteristic!!.properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY != 0)
-        val controller4Valid = controller4Characteristic != null && (controller4Characteristic!!.properties and BluetoothGattCharacteristic.PROPERTY_INDICATE != 0)
-        val controller6Valid = controller6Characteristic != null && (controller6Characteristic!!.properties and BluetoothGattCharacteristic.PROPERTY_INDICATE != 0)
+        val asyncValid = asyncCharacteristic != null && (asyncCharacteristic!!.properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY != 0)
+        val syncTxValid = syncTxCharacteristic != null && (syncTxCharacteristic!!.properties and BluetoothGattCharacteristic.PROPERTY_INDICATE != 0)
+        val unknown6Valid = unknown6Characteristic != null && (unknown6Characteristic!!.properties and BluetoothGattCharacteristic.PROPERTY_INDICATE != 0)
 
         val batteryValid = batteryCharacteristic != null && (batteryCharacteristic!!.properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY != 0)
 
-        return deviceNameCharacteristic != null && appearanceCharacteristic != null
-                && serviceChangedValid
+        return deviceNameCharacteristic != null && appearanceCharacteristic != null && serviceChangedValid
                 && manufacturerCharacteristic != null && serialCharacteristic != null
                 && hardwareRevisionCharacteristic != null && softwareRevisionCharacteristic != null
-                && controller2Valid && controller3Characteristic != null && controller4Valid
-                && controller6Valid && batteryValid
+                && asyncValid && syncRxCharacteristic != null && syncTxValid && unknown6Valid && batteryValid
     }
 
     override fun initialize() {
@@ -111,18 +109,18 @@ class ZwiftPlayBleManager(context: Context) : BleManager(context) {
             }
         }
 
-        setNotificationCallback(controller2Characteristic).with { _, data ->
+        setNotificationCallback(asyncCharacteristic).with { _, data ->
             getHexStringValue(data)?.let {
-                Logger.d(TAG, "2 $it")
+                Logger.d(TAG, "Async $it")
             }
         }
 
-        setIndicationCallback(controller4Characteristic).with { _, data ->
+        setIndicationCallback(syncTxCharacteristic).with { _, data ->
             getHexStringValue(data)?.let {
-                Logger.d(TAG, "4 $it")
+                Logger.d(TAG, "SyncTx $it")
             }
         }
-        setIndicationCallback(controller6Characteristic).with { _, data ->
+        setIndicationCallback(unknown6Characteristic).with { _, data ->
             getHexStringValue(data)?.let {
                 Logger.d(TAG, "6 $it")
             }
@@ -138,13 +136,13 @@ class ZwiftPlayBleManager(context: Context) : BleManager(context) {
             .add(enableIndications(serviceChangedCharacteristic)
                 .fail { _: BluetoothDevice?, status: Int -> failCallback(status) }
             )
-            .add(enableNotifications(controller2Characteristic)
+            .add(enableNotifications(asyncCharacteristic)
                 .fail { _: BluetoothDevice?, status: Int -> failCallback(status) }
             )
-            .add(enableIndications(controller4Characteristic)
+            .add(enableIndications(syncTxCharacteristic)
                 .fail { _: BluetoothDevice?, status: Int -> failCallback(status) }
             )
-            .add(enableIndications(controller6Characteristic)
+            .add(enableIndications(unknown6Characteristic)
                 .fail { _: BluetoothDevice?, status: Int -> failCallback(status) }
             )
             .add(enableNotifications(batteryCharacteristic)
@@ -186,12 +184,12 @@ class ZwiftPlayBleManager(context: Context) : BleManager(context) {
                 }
             })
 
-            .add(readCharacteristic(controller4Characteristic).with { _, data ->
+            .add(readCharacteristic(syncTxCharacteristic).with { _, data ->
                 getHexStringValue(data)?.let {
-                    Logger.d(TAG, "4: $it")
+                    Logger.d(TAG, "SyncTx: $it")
                 }
             })
-            .add(readCharacteristic(controller6Characteristic).with { _, data ->
+            .add(readCharacteristic(unknown6Characteristic).with { _, data ->
                 getHexStringValue(data)?.let {
                     Logger.d(TAG, "6: $it")
                 }
@@ -246,10 +244,10 @@ class ZwiftPlayBleManager(context: Context) : BleManager(context) {
         hardwareRevisionCharacteristic = null
         softwareRevisionCharacteristic = null
 
-        controller2Characteristic = null
-        controller3Characteristic = null
-        controller4Characteristic = null
-        controller6Characteristic = null
+        asyncCharacteristic = null
+        syncRxCharacteristic = null
+        syncTxCharacteristic = null
+        unknown6Characteristic = null
 
         batteryCharacteristic = null
     }

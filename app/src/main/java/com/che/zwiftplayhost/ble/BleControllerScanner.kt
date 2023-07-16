@@ -38,7 +38,7 @@ class BleControllerScanner(context: Context) : BaseObservable<BleControllerScann
 
         // only scan for the service unique to the controllers
         val filter = ScanFilter.Builder()
-            .setServiceUuid(ParcelUuid(ZwiftPlayProfile.PLAY_CONTROLLER_SERVICE_UUID))
+            .setServiceUuid(ParcelUuid(ZwiftPlayProfile.ZWIFT_CUSTOM_SERVICE_UUID))
             .build()
         val filters = listOf<ScanFilter>(filter)
 

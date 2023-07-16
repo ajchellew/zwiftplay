@@ -5,6 +5,8 @@ import java.util.UUID
 
 /*
 All the services / characteristics discovered using Nordic nRF Connect. Comments show values returned
+
+The Zwift custom characteristic details were found from decompiling the Zwift Companion app and searching for the service UUID
  */
 object ZwiftPlayProfile {
 
@@ -21,11 +23,14 @@ object ZwiftPlayProfile {
     val HARDWARE_REVISION_STRING_CHARACTERISTIC_UUID =  uuidFromShortString("2A27") // B.0
     val FIRMWARE_REVISION_STRING_CHARACTERISTIC_UUID =  uuidFromShortString("2A26") // 1.1.0
 
-    val PLAY_CONTROLLER_SERVICE_UUID: UUID = UUID.fromString("00000001-19CA-4651-86E5-FA29DCDD09D1")
-    val PLAY_CONTROLLER_UNKNOWN_CHARACTERISTIC_2_UUID: UUID = UUID.fromString("00000002-19CA-4651-86E5-FA29DCDD09D1")
-    val PLAY_CONTROLLER_UNKNOWN_CHARACTERISTIC_3_UUID: UUID = UUID.fromString("00000003-19CA-4651-86E5-FA29DCDD09D1")
-    val PLAY_CONTROLLER_UNKNOWN_CHARACTERISTIC_4_UUID: UUID = UUID.fromString("00000004-19CA-4651-86E5-FA29DCDD09D1")
-    val PLAY_CONTROLLER_UNKNOWN_CHARACTERISTIC_6_UUID: UUID = UUID.fromString("00000006-19CA-4651-86E5-FA29DCDD09D1")
+    val ZWIFT_CUSTOM_SERVICE_UUID: UUID = UUID.fromString("00000001-19CA-4651-86E5-FA29DCDD09D1")
+    val ZWIFT_ASYNC_CHARACTERISTIC_UUID: UUID = UUID.fromString("00000002-19CA-4651-86E5-FA29DCDD09D1")
+    val ZWIFT_SYNC_RX_CHARACTERISTIC_UUID: UUID = UUID.fromString("00000003-19CA-4651-86E5-FA29DCDD09D1")
+    val ZWIFT_SYNC_TX_CHARACTERISTIC_UUID: UUID = UUID.fromString("00000004-19CA-4651-86E5-FA29DCDD09D1")
+    // This doesn't appear in the real hardware but is found in the companion app code.
+    // val ZWIFT_DEBUG_CHARACTERISTIC_UUID: UUID = UUID.fromString("00000005-19CA-4651-86E5-FA29DCDD09D1")
+    // I have not seen this characteristic used. Guess it could be for Device Firmware Update (DFU)? it is a chip from Nordic.
+    val ZWIFT_UNKNOWN_6_CHARACTERISTIC_UUID: UUID = UUID.fromString("00000006-19CA-4651-86E5-FA29DCDD09D1")
 
     val BATTERY_SERVICE_UUID = uuidFromShortString("180F")
     val BATTERY_LEVEL_CHARACTERISTIC_UUID = uuidFromShortString("2A19") // 89

@@ -1,5 +1,11 @@
 # Zwift Play
 
+
+
+> Note: This is far from complete, When I started this I just assumed I'd need to listen to a characteristic notification and have to work out what button it was. 
+
+
+
 An attempt to reverse engineer the Zwift Play controllers. Initially I wanted to find someone that had done this as I wanted the ability to 'return a ride on' from a button, this isn't even available in the Companion app. 
 
 When I couldn't find someone doing anything with the controllers I decided to buy them. They are cool, even after a few uses I'd recommend them. 
@@ -28,13 +34,21 @@ Service: 00000001-19ca-4651-86e5-fa29dcdd09d1
   - Descriptor: 0x2902
 ```
 
+Packet captures also revealed that the device can appear advertising with the same Mac address + 1
+
+This shows the Nordic Semiconductor DFU service `0xfe59`
+With the following characteristics:
+```
+8ec90001-f315-4f60-9fb8-838830daea50
+8ec90002-f315-4f60-9fb8-838830daea50
+```
+These are standard and part of the Nordic Thingy dev units that I've previously played with.
+
 ## Host app
 
-The first step has been to create an app that pretends to be Zwift and listens to the real controllers. Immediate problem is no characteristics are giving any data so I imagine like [Sterzo](https://github.com/matandoocorpo/Zwift-Steer/issues/4) there is some kind of handshake.. 
+The first step was to create an app that pretends to be Zwift and listens to the real controllers. Immediate problem is no characteristics are giving any data so I imagine like [Sterzo](https://github.com/matandoocorpo/Zwift-Steer/issues/4) there is some kind of handshake.. 
 
-## Reverse Engineering
-
-Decompiling the Zwift Companion app gives some names to go with the characteristics. Along with references to _BrevetBlePeripheral_ and _ZapEncryption_ (When I started this I just assumed I'd need to listen to a characteristic notification and have to work out what button it was!)
+## Packet Capture
 
 Enabling Android "Enable Bluetooth HCI snoop log" allows logs of both sent and received data to be captured. Generating a bug report contains the log file and Wireshark can read it. 
 
@@ -76,3 +90,6 @@ Once the negotiation completes the controller constantly sends on the Async char
 
 Keep alive? Button states? It changes despite not pressing anything.
 
+## Reverse Engineer
+
+Decompiling the Zwift Companion app gives some names to go with the characteristics. Along with references to _BrevetBlePeripheral_ and _ZapEncryption_ 

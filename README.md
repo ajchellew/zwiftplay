@@ -2,7 +2,7 @@
 
 
 
-> Note: This is far from complete, When I started this I just assumed I'd need to listen to a characteristic notification and have to work out what button it was. 
+> Note: This is far from complete, When I started this I just assumed I'd need to listen to a characteristic notification and have to work out what button it was.
 
 
 
@@ -50,7 +50,7 @@ The first step was to create an app that pretends to be Zwift and listens to the
 
 ## Packet Capture
 
-Enabling Android "Enable Bluetooth HCI snoop log" allows logs of both sent and received data to be captured. Generating a bug report contains the log file and Wireshark can read it. 
+Enabling Developer Option in Android "Enable Bluetooth HCI snoop log" allows logs of both sent and received data to be captured. Generating a bug report contains the log file and Wireshark can read it. 
 
 On connection, after reading all the device information:
 - Zwift sends the following to the SyncRX characteristic beginning `52 69 64 65 4f 6e 01 02` 
@@ -88,7 +88,7 @@ Once the negotiation completes the controller constantly sends on the Async char
 `95 04 00 00 4d3fc13a6fa97ff3b88b7bb30b176605236ec38cd7d5c8`  
 `96 04 00 00 5b632d249ff262bce53aea4044fa8102a2dd78fe1d4924`  
 
-Keep alive? Button states? It changes despite not pressing anything.
+Keep alive? Button states? It changes despite not pressing anything. It changes a lot when a button is pressed, including the power button.
 
 ## Reverse Engineer
 
@@ -97,5 +97,5 @@ Decompiling the Zwift Companion app using [jadx GUI](https://github.com/skylot/j
 Deciding which controller is left and right was a mystery, however can now see its in the ManufacturerSpecificData of a ScanResult.
 The characteristic names ASYNC, SYNC_TX and SYNC_RX. Essentially another Serial Port Service implementation over BLE.
 
-The handshake appears to be simple, `RideOn 0x09 0x00` followed by a 64 byte public key. However sending this appears to do nothing. Sending the captured data however works and doesn't match the `0x09 0x00` found in the code. 
+The handshake appears to be simple, `RideOn 0x00 0x09` followed by a 64 byte public key. However sending this appears to do nothing. Sending the captured data however works and doesn't match the `0x00 0x09` found in the code. 
 

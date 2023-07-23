@@ -2,7 +2,7 @@
 
 
 
-> Note: This is far from complete, When I started this I just assumed I'd need to listen to a characteristic notification and have to work out what button it was.
+> Note: This is far from complete, When I started this I just assumed I'd need to listen to a characteristic notification and have to work out what button it was. Instead the controllers sit within the same API as the other Zwift hardware, the connection relies on creating a encryption keys and the messages are probably all encrypted. Unexpected for simple Bluetooth buttons, far better than most Bluetooth Accessories. 
 
 
 
@@ -99,3 +99,8 @@ The characteristic names ASYNC, SYNC_TX and SYNC_RX. Essentially another Serial 
 
 The handshake appears to be simple, `RideOn 0x00 0x09` followed by a 64 byte public key. However sending this appears to do nothing. Sending the captured data however works and doesn't match the `0x00 0x09` found in the code. 
 
+The fact that the obvious sequence number in the packet is in little endian and having seen that the main Zwift app sends Protocol Buffer messages to the companion makes me assume the data received is a Protocol Buffer message.
+
+In the `Zap` class `ControllerNotification` extends `GeneratedMessageLite` would appear to fit the bill, the same protocol buffer could vary in length if certain data is not sent. I guess Zap which sits next to ZwiftProtocol stands for _Zwift Accessory Protocol_?
+
+`ControllerNotification` doesn't appear to be used, I believe the companion app doesn't manage any of the communication and instead it acts as a MITM to the main Zwift application via `BleRequestProcessor`.

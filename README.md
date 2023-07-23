@@ -92,4 +92,10 @@ Keep alive? Button states? It changes despite not pressing anything.
 
 ## Reverse Engineer
 
-Decompiling the Zwift Companion app gives some names to go with the characteristics. Along with references to _BrevetBlePeripheral_ and _ZapEncryption_ 
+Decompiling the Zwift Companion app using [jadx GUI](https://github.com/skylot/jadx) gives some names to go with the characteristics. Along with references to _BrevetBlePeripheral_ and _ZapEncryption_ 
+
+Deciding which controller is left and right was a mystery, however can now see its in the ManufacturerSpecificData of a ScanResult.
+The characteristic names ASYNC, SYNC_TX and SYNC_RX. Essentially another Serial Port Service implementation over BLE.
+
+The handshake appears to be simple, `RideOn 0x09 0x00` followed by a 64 byte public key. However sending this appears to do nothing. Sending the captured data however works and doesn't match the `0x09 0x00` found in the code. 
+

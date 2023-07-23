@@ -26,6 +26,7 @@ import com.che.zwiftplayhost.utils.NotificationHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.SendChannel
+import kotlinx.coroutines.launch
 
 
 class BluetoothService : Service() {
@@ -41,7 +42,7 @@ class BluetoothService : Service() {
     }
 
     private val defaultScope = CoroutineScope(Dispatchers.Default)
-    private var myCharacteristicChangedChannel: SendChannel<String>? = null
+    private var managerUpdateChannel: SendChannel<Pair<Int, ZwiftPlayBleManager>>? = null
     private val clientManagers = mutableMapOf<String, ZwiftPlayBleManager>()
 
     private lateinit var bleScanner: BleControllerScanner
@@ -132,15 +133,15 @@ class BluetoothService : Service() {
     override fun onUnbind(intent: Intent?): Boolean =
         when (intent?.action) {
             DATA_PLANE_ACTION -> {
-                myCharacteristicChangedChannel = null
+                managerUpdateChannel = null
                 true
             }
             else -> false
         }
 
     inner class DataPlane : Binder() {
-        fun setMyCharacteristicChangedChannel(sendChannel: SendChannel<String>) {
-            myCharacteristicChangedChannel = sendChannel
+        fun setManagerUpdateChannel(sendChannel: SendChannel<Pair<Int, ZwiftPlayBleManager>>) {
+            managerUpdateChannel = sendChannel
         }
     }
 
@@ -175,13 +176,35 @@ class BluetoothService : Service() {
             if (typeByte != RC1_LEFT_SIDE && typeByte != RC1_RIGHT_SIDE) return
 
             val clientManager = ZwiftPlayBleManager(this, typeByte == RC1_LEFT_SIDE)
+            clientManager.registerListener(bleManagerCallback)
             clientManager.connect(device).useAutoConnect(true).enqueue()
             clientManagers[device.address] = clientManager
         }
     }
 
     private fun removeDevice(device: BluetoothDevice) {
-        clientManagers.remove(device.address)?.close()
+        clientManagers.remove(device.address)?.let {
+            it.unregisterListener(bleManagerCallback)
+            it.close()
+        }
+    }
+
+    private val bleManagerCallback = object : ZwiftPlayBleManager.Callback {
+        override fun initialised(address: String) {
+            clientManagers[address]?.let {
+                defaultScope.launch {
+                    managerUpdateChannel?.send(Pair(1, it))
+                }
+            }
+        }
+
+        override fun batteryLevelUpdate(address: String, level: Int) {
+            clientManagers[address]?.let {
+                defaultScope.launch {
+                    managerUpdateChannel?.send(Pair(2, it))
+                }
+            }
+        }
     }
 }
 

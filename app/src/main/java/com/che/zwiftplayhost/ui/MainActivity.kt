@@ -1,16 +1,19 @@
 package com.che.zwiftplayhost.ui
 
+import android.content.ComponentName
 import android.content.Intent
+import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.IBinder
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.che.zwiftplayhost.ble.BlePermissions
+import com.che.zwiftplayhost.ble.ZwiftPlayBleManager
 import com.che.zwiftplayhost.databinding.ActivityMainBinding
 import com.che.zwiftplayhost.databinding.RecyclerItemDebugLineBinding
 import com.che.zwiftplayhost.service.BluetoothService
@@ -18,6 +21,7 @@ import com.che.zwiftplayhost.service.isServiceRunning
 import com.che.zwiftplayhost.utils.Logger
 import com.che.zwiftplayhost.utils.NotificationHelper
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
@@ -31,6 +35,10 @@ class MainActivity : AppCompatActivity() {
 
     private val adapter = DebugLineAdapter()
 
+    private var gattServiceConn: GattServiceConn? = null
+    private var gattServiceData: BluetoothService.DataPlane? = null
+    private val bleManagerUpdateNotifications = Channel<Pair<Int, ZwiftPlayBleManager>>()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -39,11 +47,34 @@ class MainActivity : AppCompatActivity() {
         val recyclerViewDebug = binding.recyclerViewDebug
         recyclerViewDebug.layoutManager = LinearLayoutManager(this)
         recyclerViewDebug.adapter = adapter
+
+        lifecycleScope.launch(Dispatchers.Main) {
+            for (newValue in bleManagerUpdateNotifications) {
+                val bleManager = newValue.second
+                when (newValue.first) {
+                    1 -> {
+                        val textViewMac = if (bleManager.isLeft) binding.textLeftMac else binding.textRightMac
+                        val textViewBattery = if (bleManager.isLeft) binding.textLeftBattery else binding.textRightBattery
+                        textViewMac.text = bleManager.bluetoothDevice?.address?.substring(12)
+                        textViewBattery.text = "${bleManager.batteryLevel}%"
+                    }
+                    2 -> {
+                        val textViewBattery = if (bleManager.isLeft) binding.textLeftBattery else binding.textRightBattery
+                        textViewBattery.text = "${bleManager.batteryLevel}%"
+                    }
+                }
+            }
+        }
     }
 
     override fun onStart() {
         super.onStart()
         Logger.registerListener(loggerListener)
+
+        val latestGattServiceConn = GattServiceConn()
+        if (bindService(Intent(BluetoothService.DATA_PLANE_ACTION, null, this, BluetoothService::class.java), latestGattServiceConn, 0)) {
+            gattServiceConn = latestGattServiceConn
+        }
     }
 
     override fun onResume() {
@@ -66,6 +97,11 @@ class MainActivity : AppCompatActivity() {
     override fun onStop() {
         super.onStop()
         Logger.unregisterListener(loggerListener)
+
+        if (gattServiceConn != null) {
+            unbindService(gattServiceConn!!)
+            gattServiceConn = null
+        }
     }
 
     override fun onDestroy() {
@@ -81,7 +117,21 @@ class MainActivity : AppCompatActivity() {
                 if (grantResult != PackageManager.PERMISSION_GRANTED)
                     return
             }
-            //startBluetoothService()
+        }
+    }
+
+    private inner class GattServiceConn : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            if (BluetoothService::class.java.name == name?.className) {
+                gattServiceData = service as BluetoothService.DataPlane
+                gattServiceData?.setManagerUpdateChannel(bleManagerUpdateNotifications)
+            }
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            if (BluetoothService::class.java.name == name?.className) {
+                gattServiceData = null
+            }
         }
     }
 
@@ -93,6 +143,7 @@ class MainActivity : AppCompatActivity() {
             // so need to marshal to UI thread to update recycler
             lifecycleScope.launch(Dispatchers.Main) {
                 adapter.addLine(line)
+                binding.recyclerViewDebug.scrollToPosition(adapter.itemCount - 1)
             }
         }
     }

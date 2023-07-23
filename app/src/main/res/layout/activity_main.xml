@@ -22,7 +22,6 @@
 
     </com.google.android.material.appbar.AppBarLayout>
 
-    <!-- Planned to get more out of the device then I did. Hidden for now -->
     <LinearLayout
         android:id="@+id/linearLayout"
         android:layout_width="0dp"
@@ -30,8 +29,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/app_bar_layout"
-        android:layout_margin="24dp"
-        android:visibility="gone">
+        android:layout_margin="24dp">
 
         <TextView
             android:layout_width="wrap_content"

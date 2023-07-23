@@ -3,6 +3,7 @@ package com.che.zwiftplayhost.ble
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
+import android.bluetooth.BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
 import android.content.Context
 import android.util.Log
 import com.che.zwiftplayhost.ble.ZwiftPlayProfile.APPEARANCE_CHARACTERISTIC_UUID
@@ -23,15 +24,20 @@ import com.che.zwiftplayhost.ble.ZwiftPlayProfile.ZWIFT_UNKNOWN_6_CHARACTERISTIC
 import com.che.zwiftplayhost.ble.ZwiftPlayProfile.SERIAL_NUMBER_STRING_CHARACTERISTIC_UUID
 import com.che.zwiftplayhost.ble.ZwiftPlayProfile.SERVICE_CHANGED_CHARACTERISTIC_UUID
 import com.che.zwiftplayhost.utils.Logger
+import com.che.zwiftplayhost.utils.toHexString
 import no.nordicsemi.android.ble.BleManager
 import no.nordicsemi.android.ble.data.Data
 import java.nio.ByteBuffer
+import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 
-class ZwiftPlayBleManager(context: Context, private val isLeft: Boolean) : BleManager(context) {
+class ZwiftPlayBleManager(context: Context, val isLeft: Boolean) : BleManager(context) {
 
     companion object {
         private const val TAG = "ZwiftPlayBleManager"
     }
+
+    // region Characteristics
 
     private var deviceNameCharacteristic: BluetoothGattCharacteristic? = null
     private var appearanceCharacteristic: BluetoothGattCharacteristic? = null
@@ -49,6 +55,30 @@ class ZwiftPlayBleManager(context: Context, private val isLeft: Boolean) : BleMa
     private var unknown6Characteristic: BluetoothGattCharacteristic? = null
 
     private var batteryCharacteristic: BluetoothGattCharacteristic? = null
+
+    // endregion
+
+    // region Properties
+
+    private var _serialNumber = ""
+
+    var serialNumber
+        get() = _serialNumber
+        set(value) {
+            Logger.d(TAG, "Serial: $value")
+            _serialNumber = value
+        }
+
+    private var _batteryLevel = Int.MIN_VALUE
+
+    var batteryLevel
+        get() = _batteryLevel
+        set(value) {
+            Logger.d(TAG, "Battery: $value")
+            _batteryLevel = value
+        }
+
+    // endregion
 
     override fun isRequiredServiceSupported(gatt: BluetoothGatt): Boolean {
 
@@ -110,15 +140,11 @@ class ZwiftPlayBleManager(context: Context, private val isLeft: Boolean) : BleMa
         }
 
         setNotificationCallback(asyncCharacteristic).with { _, data ->
-            getHexStringValue(data)?.let {
-                Logger.d(TAG, "Async $it")
-            }
+            ZwiftData.processCharacteristic("Async", data.value)
         }
 
         setIndicationCallback(syncTxCharacteristic).with { _, data ->
-            getHexStringValue(data)?.let {
-                Logger.d(TAG, "SyncTx $it")
-            }
+            ZwiftData.processCharacteristic("SyncTx", data.value)
         }
         setIndicationCallback(unknown6Characteristic).with { _, data ->
             getHexStringValue(data)?.let {
@@ -127,9 +153,7 @@ class ZwiftPlayBleManager(context: Context, private val isLeft: Boolean) : BleMa
         }
 
         setNotificationCallback(batteryCharacteristic).with { _, data ->
-            getIntValue(data)?.let {
-                Logger.d(TAG, "Battery: $it")
-            }
+            batteryLevel = byteToInt(data)
         }
 
         beginAtomicRequestQueue()
@@ -165,7 +189,7 @@ class ZwiftPlayBleManager(context: Context, private val isLeft: Boolean) : BleMa
             })
             .add(readCharacteristic(serialCharacteristic).with { _, data ->
                 getStringValue(data)?.let {
-                    Logger.d(TAG, "Serial: $it")
+                    serialNumber = it
                 }
             })
             .add(readCharacteristic(hardwareRevisionCharacteristic).with { _, data ->
@@ -179,24 +203,15 @@ class ZwiftPlayBleManager(context: Context, private val isLeft: Boolean) : BleMa
                 }
             })
             .add(readCharacteristic(batteryCharacteristic).with { _, data ->
-                getIntValue(data)?.let {
-                    Logger.d(TAG, "Battery: $it")
-                }
+                batteryLevel = byteToInt(data)
             })
-
-            .add(readCharacteristic(syncTxCharacteristic).with { _, data ->
-                getHexStringValue(data)?.let {
-                    Logger.d(TAG, "SyncTx: $it")
-                }
+            .add(writeCharacteristic(syncRxCharacteristic, ZwiftData.buildHandshakeStart(), WRITE_TYPE_DEFAULT).with { _, data ->
+                Logger.d(TAG, "Written ${data.value?.toHexString()}")
             })
-            .add(readCharacteristic(unknown6Characteristic).with { _, data ->
-                getHexStringValue(data)?.let {
-                    Logger.d(TAG, "6: $it")
-                }
-            })
-
             .done {
-                Logger.d(TAG, "Initialisation Complete")
+                for (listener in listeners) {
+                    listener.initialised(bluetoothDevice!!.address)
+                }
             }
             .enqueue()
     }
@@ -214,6 +229,8 @@ class ZwiftPlayBleManager(context: Context, private val isLeft: Boolean) : BleMa
         }
         return null
     }
+
+    private fun byteToInt(data: Data) = data.getByte(0)?.toInt() ?: Int.MIN_VALUE
 
     private fun getIntValue(data: Data): Int? {
         data.value?.let {
@@ -251,12 +268,35 @@ class ZwiftPlayBleManager(context: Context, private val isLeft: Boolean) : BleMa
 
         batteryCharacteristic = null
     }
+
+    // region Listener
+
+    interface Callback {
+        fun initialised(address: String)
+        fun batteryLevelUpdate(address: String, level: Int)
+    }
+
+    // thread-safe set of listeners
+    private val mListeners =
+        Collections.newSetFromMap(
+            ConcurrentHashMap<Callback, Boolean>(1)
+        )
+
+    fun registerListener(listener: Callback) {
+        mListeners.add(listener)
+    }
+
+    fun unregisterListener(listener: Callback) {
+        mListeners.remove(listener)
+    }
+
+    /**
+     * Get a reference to the unmodifiable set containing all the registered listeners.
+     */
+    private val listeners: Set<Callback>
+        get() = Collections.unmodifiableSet(mListeners)
+
+    // endregion
 }
 
-const val PREFIX = "0x"
-private fun ByteArray.toHexString(): String {
-    val result = asUByteArray().joinToString(" $PREFIX", prefix = PREFIX, postfix = " ") { it.toString(16).uppercase().padStart(2, '0') }
-    if (result != "$PREFIX ")
-        return result
-    return ""
-}
+

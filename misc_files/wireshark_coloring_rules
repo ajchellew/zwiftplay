@@ -1,0 +1,7 @@
+# This file was created by Wireshark. Edit with care.
+@Nordic DFU Control Characteristic@btatt.characteristic_uuid128 == 8e:c9:00:01:f3:15:4f:60:9f:b8:83:88:30:da:ea:50 || btatt.uuid128 == 8e:c9:00:01:f3:15:4f:60:9f:b8:83:88:30:da:ea:50@[43690,0,0][65535,65535,65535]
+@Nordic DFU Packet Characteristic@btatt.characteristic_uuid128 == 8e:c9:00:02:f3:15:4f:60:9f:b8:83:88:30:da:ea:50 || btatt.uuid128 == 8e:c9:00:02:f3:15:4f:60:9f:b8:83:88:30:da:ea:50@[37265,0,0][65535,65535,65535]
+@Zwift Async Characteristic@btatt.characteristic_uuid128 == 00:00:00:02:19:ca:46:51:86:e5:fa:29:dc:dd:09:d1 || btatt.uuid128 == 00:00:00:02:19:ca:46:51:86:e5:fa:29:dc:dd:09:d1@[65535,65535,32639][0,0,0]
+@Zwift Rx Characteristic@btatt.characteristic_uuid128 == 00:00:00:03:19:ca:46:51:86:e5:fa:29:dc:dd:09:d1 || btatt.uuid128 == 00:00:00:03:19:ca:46:51:86:e5:fa:29:dc:dd:09:d1@[43690,65535,65535][0,0,0]
+@Zwift Tx Characteristic@btatt.characteristic_uuid128 == 00:00:00:04:19:ca:46:51:86:e5:fa:29:dc:dd:09:d1 || btatt.uuid128 == 00:00:00:04:19:ca:46:51:86:e5:fa:29:dc:dd:09:d1@[43690,65535,32639][0,0,0]
+@Zwift Unknown Characteristic@btatt.characteristic_uuid128 == 00:00:00:06:19:ca:46:51:86:e5:fa:29:dc:dd:09:d1 || btatt.uuid128 == 00:00:00:06:19:ca:46:51:86:e5:fa:29:dc:dd:09:d1@[65535,43690,65535][0,0,0]

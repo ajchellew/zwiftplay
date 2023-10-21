@@ -2,7 +2,7 @@
 
 
 
-> Note: This is far from complete, When I started this I just assumed I'd need to listen to a characteristic notification and have to work out what button it was. Instead the controllers sit within the same API as the other Zwift hardware, the connection relies on creating a encryption keys and the messages are probably all encrypted. Unexpected for simple Bluetooth buttons, far better than most Bluetooth Accessories. 
+> Note: When I started this I just assumed I'd need to listen to a characteristic notification and have to work out what button it was. Instead the controllers sit within the same API as the other Zwift hardware, the connection relies on creating a encryption keys and the messages are all encrypted. Unexpected for simple Bluetooth buttons, far better than most Bluetooth Accessories. Initially I didn't finish decoding these, 3 months later I saw [redditor](https://www.reddit.com/r/Zwift/comments/17bofib/comment/k5l0fb7/) and [mod maker](https://www.gta5-mods.com/scripts/gt-bike-v) Makinolo had done it, so I needed to get further and I now had some helpful pointers. 
 
 
 
@@ -104,3 +104,19 @@ The fact that the obvious sequence number in the packet is in little endian and 
 In the `Zap` class `ControllerNotification` extends `GeneratedMessageLite` would appear to fit the bill, the same protocol buffer could vary in length if certain data is not sent. I guess Zap which sits next to ZwiftProtocol stands for _Zwift Accessory Protocol_?
 
 `ControllerNotification` doesn't appear to be used, I believe the companion app doesn't manage any of the communication and instead it acts as a MITM to the main Zwift application via `BleRequestProcessor`.
+
+### 3 months later...
+
+3 months have passed since I touched this side project, I saw Makinolo's post on Reddit and decided I needed to finish at least decoding off. The messages were indeed encrypted and were protocol buffer messages.
+
+See [Makinolo's blog post](https://www.makinolo.com/blog/2023/10/08/connecting-to-zwift-play-controllers/) for a write up on the encryption used. I couldn't write it better. The only catch is that in .NET the encryption AAD is handled in a seperate call where as in the Java code its left on the end of the payload to decrypt. I should have known this sooner as I had the same issue with working with AES-GCM between Android and desktop used in another project.
+
+Now we have a very dumb app that:
+- Scans for the devices
+- Connects to the devices
+- Reads the characteristics and manufacturer data
+- Performs the required handshake and generates the shared secret key
+- Decrpyts and decodes _some_ messages
+- Logs buttons pressed
+
+![image](https://github.com/ajchellew/zwiftplay/assets/17216760/86c91c0c-30d6-41b4-925c-dd74c7b9c488)

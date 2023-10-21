@@ -2,7 +2,7 @@
 
 
 
-> Note: This is far from complete, When I started this I just assumed I'd need to listen to a characteristic notification and have to work out what button it was. 
+> Note: This is far from complete, When I started this I just assumed I'd need to listen to a characteristic notification and have to work out what button it was. Instead the controllers sit within the same API as the other Zwift hardware, the connection relies on creating a encryption keys and the messages are probably all encrypted. Unexpected for simple Bluetooth buttons, far better than most Bluetooth Accessories. 
 
 
 
@@ -50,7 +50,7 @@ The first step was to create an app that pretends to be Zwift and listens to the
 
 ## Packet Capture
 
-Enabling Android "Enable Bluetooth HCI snoop log" allows logs of both sent and received data to be captured. Generating a bug report contains the log file and Wireshark can read it. 
+Enabling Developer Option in Android "Enable Bluetooth HCI snoop log" allows logs of both sent and received data to be captured. Generating a bug report contains the log file and Wireshark can read it. 
 
 On connection, after reading all the device information:
 - Zwift sends the following to the SyncRX characteristic beginning `52 69 64 65 4f 6e 01 02` 
@@ -88,8 +88,19 @@ Once the negotiation completes the controller constantly sends on the Async char
 `95 04 00 00 4d3fc13a6fa97ff3b88b7bb30b176605236ec38cd7d5c8`  
 `96 04 00 00 5b632d249ff262bce53aea4044fa8102a2dd78fe1d4924`  
 
-Keep alive? Button states? It changes despite not pressing anything.
+Keep alive? Button states? It changes despite not pressing anything. It changes a lot when a button is pressed, including the power button.
 
 ## Reverse Engineer
 
-Decompiling the Zwift Companion app gives some names to go with the characteristics. Along with references to _BrevetBlePeripheral_ and _ZapEncryption_ 
+Decompiling the Zwift Companion app using [jadx GUI](https://github.com/skylot/jadx) gives some names to go with the characteristics. Along with references to _BrevetBlePeripheral_ and _ZapEncryption_ 
+
+Deciding which controller is left and right was a mystery, however can now see its in the ManufacturerSpecificData of a ScanResult.
+The characteristic names ASYNC, SYNC_TX and SYNC_RX. Essentially another Serial Port Service implementation over BLE.
+
+The handshake appears to be simple, `RideOn 0x00 0x09` followed by a 64 byte public key. However sending this appears to do nothing. Sending the captured data however works and doesn't match the `0x00 0x09` found in the code. 
+
+The fact that the obvious sequence number in the packet is in little endian and having seen that the main Zwift app sends Protocol Buffer messages to the companion makes me assume the data received is a Protocol Buffer message.
+
+In the `Zap` class `ControllerNotification` extends `GeneratedMessageLite` would appear to fit the bill, the same protocol buffer could vary in length if certain data is not sent. I guess Zap which sits next to ZwiftProtocol stands for _Zwift Accessory Protocol_?
+
+`ControllerNotification` doesn't appear to be used, I believe the companion app doesn't manage any of the communication and instead it acts as a MITM to the main Zwift application via `BleRequestProcessor`.

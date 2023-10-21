@@ -1,0 +1,60 @@
+package com.che.zwiftplayhost.ble.zap
+
+import com.che.zwiftplayhost.ble.zap.ZapConstants.BATTERY_LEVEL_TYPE
+import com.che.zwiftplayhost.ble.zap.ZapConstants.CONTROLLER_NOTIFICATION_MESSAGE_TYPE
+import com.che.zwiftplayhost.ble.zap.ZapConstants.EMPTY_MESSAGE_TYPE
+import com.che.zwiftplayhost.ble.zap.proto.BatteryStatus
+import com.che.zwiftplayhost.ble.zap.proto.ControllerNotification
+import com.che.zwiftplayhost.utils.Logger
+import com.che.zwiftplayhost.utils.toHexString
+import timber.log.Timber
+
+class ZwiftPlayDevice : AbstractZapDevice() {
+
+    // you get battery level in a BLE characteristic and via a ZAP message.
+    private var batteryLevel = 0
+
+    private var lastButtonState: ControllerNotification? = null
+
+    override fun processEncryptedData(bytes: ByteArray) {
+        try {
+
+            if (LOG_RAW) Timber.d("Decrypted: ${bytes.toHexString()}")
+
+            val counter = bytes.copyOfRange(0, Int.SIZE_BYTES)
+            val payload = bytes.copyOfRange(Int.SIZE_BYTES, bytes.size)
+
+            val data = zapEncryption.decrypt(counter, payload)
+            val type = data[0]
+            val message = data.copyOfRange(1, data.size)
+
+            when (type) {
+                CONTROLLER_NOTIFICATION_MESSAGE_TYPE -> processButtonNotification(ControllerNotification(message))
+                EMPTY_MESSAGE_TYPE -> if (LOG_RAW) Logger.d("Empty Message") // expected when nothing happening
+                BATTERY_LEVEL_TYPE -> {
+                    val notification = BatteryStatus(message)
+                    if (batteryLevel != notification.level) {
+                        batteryLevel = notification.level
+                        Logger.d("Battery level update: $batteryLevel")
+                    }
+                }
+                else -> Logger.e("Unprocessed - Type: ${type.toUByte().toHexString()} Data: ${data.toHexString()}")
+            }
+
+        } catch (ex: Exception) {
+            Logger.e("Decrypt failed: " + ex.message)
+        }
+    }
+
+    private fun processButtonNotification(notification: ControllerNotification) {
+        if (lastButtonState == null)
+            Logger.d(notification.toString())
+        else {
+            val diff = notification.diff(lastButtonState!!)
+            if (!diff.isNullOrBlank()) // get repeats of the same state
+                Logger.d(diff)
+        }
+        lastButtonState = notification
+    }
+}
+

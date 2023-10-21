@@ -1,6 +1,7 @@
 package com.che.zwiftplayhost.utils
 
 import android.util.Log
+import timber.log.Timber
 import java.lang.Exception
 
 object Logger : BaseObservable<Logger.LogCallback>() {
@@ -9,23 +10,23 @@ object Logger : BaseObservable<Logger.LogCallback>() {
         fun newLogLine(line: String)
     }
 
-    fun d(tag: String, line: String) {
-        Log.d(tag, line)
+    fun d(line: String) {
+        Timber.d(line)
         callback(line)
     }
 
-    fun i(tag: String, line: String) {
-        Log.i(tag, line)
+    fun i(line: String) {
+        Timber.i(line)
         callback(line)
     }
 
-    fun e(tag: String, line: String) {
-        Log.e(tag, line)
+    fun e(line: String) {
+        Timber.e(line)
         callback(line)
     }
 
-    fun e(tag: String, line: String, exception: Exception) {
-        Log.e(tag, line, exception)
+    fun e(line: String, exception: Exception) {
+        Timber.e(exception, line)
         callback(line)
     }
 

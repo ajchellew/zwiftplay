@@ -91,7 +91,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun startBluetoothService() {
         startForegroundService(Intent(this, BluetoothService::class.java))
-        Logger.d(TAG, "Started Service")
+        Logger.d("Started Service")
     }
 
     override fun onStop() {

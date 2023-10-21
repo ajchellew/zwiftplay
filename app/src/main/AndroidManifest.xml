@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
-
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="true"/>
 
@@ -30,7 +28,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.ZwiftPlayHost"
-        tools:targetApi="31">
+        android:name=".PlayApplication">
         <activity
             android:name=".ui.MainActivity"
             android:exported="true">

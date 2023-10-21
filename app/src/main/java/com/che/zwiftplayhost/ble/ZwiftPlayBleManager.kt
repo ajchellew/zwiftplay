@@ -23,19 +23,18 @@ import com.che.zwiftplayhost.ble.ZwiftPlayProfile.ZWIFT_SYNC_TX_CHARACTERISTIC_U
 import com.che.zwiftplayhost.ble.ZwiftPlayProfile.ZWIFT_UNKNOWN_6_CHARACTERISTIC_UUID
 import com.che.zwiftplayhost.ble.ZwiftPlayProfile.SERIAL_NUMBER_STRING_CHARACTERISTIC_UUID
 import com.che.zwiftplayhost.ble.ZwiftPlayProfile.SERVICE_CHANGED_CHARACTERISTIC_UUID
+import com.che.zwiftplayhost.ble.zap.AbstractZapDevice
+import com.che.zwiftplayhost.ble.zap.ZwiftPlayDevice
 import com.che.zwiftplayhost.utils.Logger
 import com.che.zwiftplayhost.utils.toHexString
 import no.nordicsemi.android.ble.BleManager
 import no.nordicsemi.android.ble.data.Data
-import java.nio.ByteBuffer
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 
 class ZwiftPlayBleManager(context: Context, val isLeft: Boolean) : BleManager(context) {
 
-    companion object {
-        private const val TAG = "ZwiftPlayBleManager"
-    }
+    private lateinit var zapDevice: AbstractZapDevice
 
     // region Characteristics
 
@@ -65,7 +64,7 @@ class ZwiftPlayBleManager(context: Context, val isLeft: Boolean) : BleManager(co
     var serialNumber
         get() = _serialNumber
         set(value) {
-            Logger.d(TAG, "Serial: $value")
+            Logger.d("Serial: $value")
             _serialNumber = value
         }
 
@@ -74,7 +73,7 @@ class ZwiftPlayBleManager(context: Context, val isLeft: Boolean) : BleManager(co
     var batteryLevel
         get() = _batteryLevel
         set(value) {
-            Logger.d(TAG, "Battery: $value")
+            Logger.d("Battery: $value")
             _batteryLevel = value
         }
 
@@ -131,24 +130,26 @@ class ZwiftPlayBleManager(context: Context, val isLeft: Boolean) : BleManager(co
 
     override fun initialize() {
 
-        Logger.d(TAG, "Initialize ${if (isLeft) "Left" else "Right"} Controller")
+        Logger.d("Initialize ${if (isLeft) "Left" else "Right"} Controller")
+
+        zapDevice = ZwiftPlayDevice()
 
         setIndicationCallback(serviceChangedCharacteristic).with { _, data ->
             getHexStringValue(data)?.let {
-                Logger.d(TAG, "Service Changed $it")
+                Logger.d("Service Changed $it")
             }
         }
 
         setNotificationCallback(asyncCharacteristic).with { _, data ->
-            ZwiftData.processCharacteristic("Async", data.value)
+            zapDevice.processCharacteristic("Async", data.value)
         }
 
         setIndicationCallback(syncTxCharacteristic).with { _, data ->
-            ZwiftData.processCharacteristic("SyncTx", data.value)
+            zapDevice.processCharacteristic("SyncTx", data.value)
         }
         setIndicationCallback(unknown6Characteristic).with { _, data ->
             getHexStringValue(data)?.let {
-                Logger.d(TAG, "6 $it")
+                Logger.d("6 $it")
             }
         }
 
@@ -174,17 +175,17 @@ class ZwiftPlayBleManager(context: Context, val isLeft: Boolean) : BleManager(co
             )
             .add(readCharacteristic(deviceNameCharacteristic).with { _, data ->
                 getStringValue(data)?.let {
-                    Logger.d(TAG, "Device Name: $it")
+                    Logger.d("Device Name: $it")
                 }
             })
             .add(readCharacteristic(appearanceCharacteristic).with { _, data ->
                 getHexStringValue(data)?.let {
-                    Logger.d(TAG, "Appearance: $it")
+                    Logger.d("Appearance: $it")
                 }
             })
             .add(readCharacteristic(manufacturerCharacteristic).with { _, data ->
                 getStringValue(data)?.let {
-                    Logger.d(TAG, "Manufacturer: $it")
+                    Logger.d("Manufacturer: $it")
                 }
             })
             .add(readCharacteristic(serialCharacteristic).with { _, data ->
@@ -194,19 +195,19 @@ class ZwiftPlayBleManager(context: Context, val isLeft: Boolean) : BleManager(co
             })
             .add(readCharacteristic(hardwareRevisionCharacteristic).with { _, data ->
                 getStringValue(data)?.let {
-                    Logger.d(TAG, "Hardware: $it")
+                    Logger.d("Hardware: $it")
                 }
             })
             .add(readCharacteristic(softwareRevisionCharacteristic).with { _, data ->
                 getStringValue(data)?.let {
-                    Logger.d(TAG, "Software: $it")
+                    Logger.d("Software: $it")
                 }
             })
             .add(readCharacteristic(batteryCharacteristic).with { _, data ->
                 batteryLevel = byteToInt(data)
             })
-            .add(writeCharacteristic(syncRxCharacteristic, ZwiftData.buildHandshakeStart(), WRITE_TYPE_DEFAULT).with { _, data ->
-                Logger.d(TAG, "Written ${data.value?.toHexString()}")
+            .add(writeCharacteristic(syncRxCharacteristic, zapDevice.buildHandshakeStart(), WRITE_TYPE_DEFAULT).with { _, data ->
+                Logger.d("Written ${data.value?.toHexString()}")
             })
             .done {
                 for (listener in listeners) {
@@ -231,18 +232,6 @@ class ZwiftPlayBleManager(context: Context, val isLeft: Boolean) : BleManager(co
     }
 
     private fun byteToInt(data: Data) = data.getByte(0)?.toInt() ?: Int.MIN_VALUE
-
-    private fun getIntValue(data: Data): Int? {
-        data.value?.let {
-            if (it.size == 1)
-                return it[0].toInt()
-            if (it.size == 2)
-                return ByteBuffer.wrap(it).short.toInt()
-            if (it.size == 4)
-                return ByteBuffer.wrap(it).int
-        }
-        return null
-    }
 
     private fun failCallback(status: Int) {
         log(Log.ERROR, "Could not subscribe: $status")

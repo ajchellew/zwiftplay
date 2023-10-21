@@ -80,7 +80,7 @@ class BluetoothService : Service() {
             }
 
             override fun onError(errorCode: Int) {
-                Logger.e(TAG, "Scanner Error code: $errorCode")
+                Logger.e("Scanner Error code: $errorCode")
             }
         })
 
@@ -163,7 +163,7 @@ class BluetoothService : Service() {
         val device = scanResult.device
 
         if (!clientManagers.containsKey(device.address)) {
-            Logger.d(TAG, "Connecting ${device.address}")
+            Logger.d("Connecting ${device.address}")
 
             val manData = scanResult.scanRecord!!.manufacturerSpecificData
             if (manData == null || manData.isEmpty()) return

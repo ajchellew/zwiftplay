@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace 'com.che.zwiftplayhost'
-    compileSdk 33
+    compileSdk 34
 
     defaultConfig {
         applicationId "com.che.zwiftplayhost"
@@ -38,16 +38,24 @@ android {
 dependencies {
 
     // Default app stuff
-    implementation 'androidx.core:core-ktx:1.10.1'
+    implementation 'androidx.core:core-ktx:1.12.0'
     implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'com.google.android.material:material:1.9.0'
+    implementation 'com.google.android.material:material:1.10.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'com.jakewharton.timber:timber:5.0.1'
 
     // Nordic BLE library to avoid pain
     implementation 'no.nordicsemi.android:ble-ktx:2.6.1'
 
     // Lifecycle coroutine scopes
-    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.6.1'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.6.2'
+
+    // all the crypto
+    implementation 'org.bouncycastle:bcpkix-jdk15to18:1.68'
+    implementation 'org.bouncycastle:bcprov-jdk15to18:1.68'
+
+    // warn - only added to hackingly decode, way more dependencies needed to used protobuf for encoding
+    implementation 'com.google.protobuf:protobuf-javalite:3.24.4'
 
     // Test dependencies - unloved but aspirational :(
     testImplementation 'junit:junit:4.13.2'

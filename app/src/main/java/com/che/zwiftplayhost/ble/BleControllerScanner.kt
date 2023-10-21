@@ -44,13 +44,13 @@ class BleControllerScanner(context: Context) : BaseObservable<BleControllerScann
 
         val settings = ScanSettings.Builder().build()
 
-        Logger.d(TAG, "Start Scan")
+        Logger.d("Start Scan")
         bluetoothLeScanner.startScan(filters, settings, scanCallback)
     }
 
     @SuppressLint("MissingPermission") // permission handled by UI
     fun stop() {
-        Logger.d(TAG, "Stop Scan")
+        Logger.d("Stop Scan")
         bluetoothLeScanner.stopScan(scanCallback)
     }
 

@@ -116,7 +116,7 @@ Now we have a very dumb app that:
 - Connects to the devices
 - Reads the characteristics and manufacturer data
 - Performs the required handshake and generates the shared secret key
-- Decrpyts and decodes _some_ messages
+- Decrypts and decodes _some_ messages
 - Logs buttons pressed
 
 ![image](https://github.com/ajchellew/zwiftplay/assets/17216760/86c91c0c-30d6-41b4-925c-dd74c7b9c488)

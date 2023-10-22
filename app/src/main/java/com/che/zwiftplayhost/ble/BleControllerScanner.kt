@@ -9,14 +9,11 @@ import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.os.ParcelUuid
-import com.che.zwiftplayhost.utils.BaseObservable
-import com.che.zwiftplayhost.utils.Logger
+import com.che.zap.device.ZapBleUuids
+import com.che.zap.utils.BaseObservable
+import com.che.zap.utils.Logger
 
 class BleControllerScanner(context: Context) : BaseObservable<BleControllerScanner.ScannerCallback>() {
-
-    companion object {
-        private const val TAG = "Scanner"
-    }
 
     private val bluetoothLeScanner: BluetoothLeScanner
 
@@ -38,7 +35,7 @@ class BleControllerScanner(context: Context) : BaseObservable<BleControllerScann
 
         // only scan for the service unique to the controllers
         val filter = ScanFilter.Builder()
-            .setServiceUuid(ParcelUuid(ZwiftPlayProfile.ZWIFT_CUSTOM_SERVICE_UUID))
+            .setServiceUuid(ParcelUuid(ZapBleUuids.ZWIFT_CUSTOM_SERVICE_UUID))
             .build()
         val filters = listOf<ScanFilter>(filter)
 

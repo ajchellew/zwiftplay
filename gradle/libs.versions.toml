@@ -1,0 +1,58 @@
+[versions]
+androidx-appcompat = "1.6.1"
+androidx-constraintlayout = "2.1.4"
+androidx-core = "1.12.0"
+androidx-recyclerview = "1.3.2"
+# @keep
+bouncy-castle = "1.68"
+ble-ktx = "2.6.1"
+compile-sdk = "34"
+gradle = "8.1.2"
+kotlin = "1.9.10"
+lifecycle-runtime-ktx = "2.6.2"
+material = "1.10.0"
+# @keep
+min-sdk = "30"
+protobuf = "3.24.4"
+# @keep
+protobuf-javalite = "3.24.4"
+target-sdk = "33"
+androidx-junit = "1.1.5"
+espresso-core = "3.5.1"
+junit = "4.13.2"
+
+[libraries]
+androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "androidx-appcompat" }
+androidx-constraintlayout = { module = "androidx.constraintlayout:constraintlayout", version.ref = "androidx-constraintlayout" }
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidx-core" }
+androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle-runtime-ktx" }
+androidx-recyclerview = { module = "androidx.recyclerview:recyclerview", version.ref = "androidx-recyclerview" }
+bouncy-castle-bcpkix = { module = "org.bouncycastle:bcpkix-jdk15to18", version.ref = "bouncy-castle" }
+bouncy-castle-prov = { module = "org.bouncycastle:bcprov-jdk15to18", version.ref = "bouncy-castle" }
+ble-ktx = { module = "no.nordicsemi.android:ble-ktx", version.ref = "ble-ktx" }
+google-android-material = { module = "com.google.android.material:material", version.ref = "material" }
+google-protobuf-kotlin-lite = { module = "com.google.protobuf:protobuf-kotlin-lite", version.ref = "protobuf" }
+jakewharton-timber = "com.jakewharton.timber:timber:5.0.1"
+kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+kotlinx-coroutines = "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3"
+protobuf-javalite = { module = "com.google.protobuf:protobuf-javalite", version.ref = "protobuf-javalite" }
+testing-androidx-junit = { module = "androidx.test.ext:junit", version.ref = "androidx-junit" }
+testing-espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "espresso-core" }
+testing-junit = { module = "junit:junit", version.ref = "junit" }
+androidx-core = { group = "androidx.core", name = "core", version = "1.12.0" }
+
+[bundles]
+base = [
+    "androidx-appcompat",
+    "androidx-core-ktx",
+    "google-android-material",
+]
+test = [
+    "testing-androidx-junit",
+    "testing-espresso-core",
+]
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "gradle" }
+android-library = { id = "com.android.library", version.ref = "gradle" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }

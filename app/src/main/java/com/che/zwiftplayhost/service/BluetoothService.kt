@@ -1,7 +1,6 @@
 package com.che.zwiftplayhost.service
 
 import android.Manifest
-import android.app.ActivityManager
 import android.app.Service
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
@@ -18,10 +17,13 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE
 import androidx.core.util.isEmpty
+import com.che.zap.device.ZapConstants.ZWIFT_MANUFACTURER_ID
+import com.che.zap.device.ZapConstants.RC1_LEFT_SIDE
+import com.che.zap.device.ZapConstants.RC1_RIGHT_SIDE
 import com.che.zwiftplayhost.R
 import com.che.zwiftplayhost.ble.BleControllerScanner
 import com.che.zwiftplayhost.ble.ZwiftPlayBleManager
-import com.che.zwiftplayhost.utils.Logger
+import com.che.zap.utils.Logger
 import com.che.zwiftplayhost.utils.NotificationHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,12 +35,8 @@ class BluetoothService : Service() {
 
     companion object {
         const val NOTIFICATION_ID = 1
-        private const val TAG = "GattService"
 
         const val DATA_PLANE_ACTION = "DataPlane"
-
-        private const val RC1_LEFT_SIDE: Byte = 3
-        private const val RC1_RIGHT_SIDE: Byte = 2
     }
 
     private val defaultScope = CoroutineScope(Dispatchers.Default)
@@ -169,7 +167,7 @@ class BluetoothService : Service() {
             if (manData == null || manData.isEmpty()) return
 
             // 2378 is the value in the manufacturer data
-            val data = scanResult.scanRecord?.getManufacturerSpecificData(2378) ?: return
+            val data = scanResult.scanRecord?.getManufacturerSpecificData(ZWIFT_MANUFACTURER_ID) ?: return
 
             // We expect a device of BrevetDeviceType.RC1 which is 2 or 3 depending on which side it is
             val typeByte = data[0]
@@ -206,11 +204,4 @@ class BluetoothService : Service() {
             }
         }
     }
-}
-
-
-fun isServiceRunning(context: Context, serviceClass: Class<*>): Boolean {
-    val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-    return manager.getRunningServices(Integer.MAX_VALUE)
-        .any { it.service.className == serviceClass.name }
 }

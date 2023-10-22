@@ -1,9 +1,9 @@
-package com.che.zwiftplayhost.utils
+package com.che.zwiftplayemulator.utils
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
-import com.che.zwiftplayhost.R
+import com.che.zwiftplayemulator.R
 
 object NotificationHelper {
 

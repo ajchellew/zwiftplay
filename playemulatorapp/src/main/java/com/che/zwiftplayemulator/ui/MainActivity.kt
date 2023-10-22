@@ -1,4 +1,4 @@
-package com.che.zwiftplayhost.ui
+package com.che.zwiftplayemulator.ui
 
 import android.content.ComponentName
 import android.content.Intent
@@ -14,14 +14,12 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.che.common.NotificationUtils
 import com.che.common.isServiceRunning
-import com.che.zwiftplayhost.ble.ZwiftPlayBleManager
-import com.che.zwiftplayhost.databinding.ActivityMainBinding
-import com.che.zwiftplayhost.databinding.RecyclerItemDebugLineBinding
-import com.che.zwiftplayhost.service.BluetoothService
 import com.che.zap.utils.Logger
-import com.che.zwiftplayhost.ble.BlePermissions
+import com.che.zwiftplayemulator.ble.AdvertisingBlePermissions
+import com.che.zwiftplayemulator.databinding.ActivityMainBinding
+import com.che.zwiftplayemulator.databinding.RecyclerItemDebugLineBinding
+import com.che.zwiftplayemulator.service.EmulatorBluetoothService
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
@@ -35,8 +33,8 @@ class MainActivity : AppCompatActivity() {
     private val adapter = DebugLineAdapter()
 
     private var gattServiceConn: GattServiceConn? = null
-    private var gattServiceData: BluetoothService.DataPlane? = null
-    private val bleManagerUpdateNotifications = Channel<Pair<Int, ZwiftPlayBleManager>>()
+    private var gattServiceData: EmulatorBluetoothService.DataPlane? = null
+    //private val bleManagerUpdateNotifications = Channel<Pair<Int, ZwiftPlayBleManager>>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,7 +45,7 @@ class MainActivity : AppCompatActivity() {
         recyclerViewDebug.layoutManager = LinearLayoutManager(this)
         recyclerViewDebug.adapter = adapter
 
-        lifecycleScope.launch(Dispatchers.Main) {
+        /*lifecycleScope.launch(Dispatchers.Main) {
             for (newValue in bleManagerUpdateNotifications) {
                 val bleManager = newValue.second
                 when (newValue.first) {
@@ -63,7 +61,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }
-        }
+        }*/
     }
 
     override fun onStart() {
@@ -71,7 +69,7 @@ class MainActivity : AppCompatActivity() {
         Logger.registerListener(loggerListener)
 
         val latestGattServiceConn = GattServiceConn()
-        if (bindService(Intent(BluetoothService.DATA_PLANE_ACTION, null, this, BluetoothService::class.java), latestGattServiceConn, 0)) {
+        if (bindService(Intent(EmulatorBluetoothService.DATA_PLANE_ACTION, null, this, EmulatorBluetoothService::class.java), latestGattServiceConn, 0)) {
             gattServiceConn = latestGattServiceConn
         }
     }
@@ -80,16 +78,16 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
 
         // We need runtime permissions for anything with BLE. Just simply prompt for this on resume of activity.
-        if (!BlePermissions.hasRequiredPermissions(this))
-            BlePermissions.requestPermissions(this, PERMISSION_REQUEST_CODE)
+        if (!AdvertisingBlePermissions.hasRequiredPermissions(this))
+            AdvertisingBlePermissions.requestPermissions(this, PERMISSION_REQUEST_CODE)
         else if (!NotificationUtils.notificationsEnabled(this))
             NotificationUtils.requestPermission(this, PERMISSION_REQUEST_CODE)
-        else if (!isServiceRunning(this, BluetoothService::class.java))
+        else if (!isServiceRunning(this, EmulatorBluetoothService::class.java))
             startBluetoothService()
     }
 
     private fun startBluetoothService() {
-        startForegroundService(Intent(this, BluetoothService::class.java))
+        startForegroundService(Intent(this, EmulatorBluetoothService::class.java))
         Logger.d("Started Service")
     }
 
@@ -105,7 +103,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        stopService(Intent(this, BluetoothService::class.java))
+        stopService(Intent(this, EmulatorBluetoothService::class.java))
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -121,14 +119,14 @@ class MainActivity : AppCompatActivity() {
 
     private inner class GattServiceConn : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            if (BluetoothService::class.java.name == name?.className) {
-                gattServiceData = service as BluetoothService.DataPlane
-                gattServiceData?.setManagerUpdateChannel(bleManagerUpdateNotifications)
+            if (EmulatorBluetoothService::class.java.name == name?.className) {
+                gattServiceData = service as EmulatorBluetoothService.DataPlane
+                //gattServiceData?.setManagerUpdateChannel(bleManagerUpdateNotifications)
             }
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
-            if (BluetoothService::class.java.name == name?.className) {
+            if (EmulatorBluetoothService::class.java.name == name?.className) {
                 gattServiceData = null
             }
         }

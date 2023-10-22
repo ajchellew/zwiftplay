@@ -6,27 +6,28 @@ import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
 import android.content.Context
 import android.util.Log
-import com.che.zwiftplayhost.ble.ZwiftPlayProfile.APPEARANCE_CHARACTERISTIC_UUID
-import com.che.zwiftplayhost.ble.ZwiftPlayProfile.BATTERY_LEVEL_CHARACTERISTIC_UUID
-import com.che.zwiftplayhost.ble.ZwiftPlayProfile.BATTERY_SERVICE_UUID
-import com.che.zwiftplayhost.ble.ZwiftPlayProfile.DEVICE_INFORMATION_SERVICE_UUID
-import com.che.zwiftplayhost.ble.ZwiftPlayProfile.DEVICE_NAME_CHARACTERISTIC_UUID
-import com.che.zwiftplayhost.ble.ZwiftPlayProfile.FIRMWARE_REVISION_STRING_CHARACTERISTIC_UUID
-import com.che.zwiftplayhost.ble.ZwiftPlayProfile.GENERIC_ACCESS_SERVICE_UUID
-import com.che.zwiftplayhost.ble.ZwiftPlayProfile.GENERIC_ATTRIBUTE_SERVICE_UUID
-import com.che.zwiftplayhost.ble.ZwiftPlayProfile.HARDWARE_REVISION_STRING_CHARACTERISTIC_UUID
-import com.che.zwiftplayhost.ble.ZwiftPlayProfile.MANUFACTURER_NAME_STRING_CHARACTERISTIC_UUID
-import com.che.zwiftplayhost.ble.ZwiftPlayProfile.ZWIFT_CUSTOM_SERVICE_UUID
-import com.che.zwiftplayhost.ble.ZwiftPlayProfile.ZWIFT_ASYNC_CHARACTERISTIC_UUID
-import com.che.zwiftplayhost.ble.ZwiftPlayProfile.ZWIFT_SYNC_RX_CHARACTERISTIC_UUID
-import com.che.zwiftplayhost.ble.ZwiftPlayProfile.ZWIFT_SYNC_TX_CHARACTERISTIC_UUID
-import com.che.zwiftplayhost.ble.ZwiftPlayProfile.ZWIFT_UNKNOWN_6_CHARACTERISTIC_UUID
-import com.che.zwiftplayhost.ble.ZwiftPlayProfile.SERIAL_NUMBER_STRING_CHARACTERISTIC_UUID
-import com.che.zwiftplayhost.ble.ZwiftPlayProfile.SERVICE_CHANGED_CHARACTERISTIC_UUID
-import com.che.zwiftplayhost.ble.zap.AbstractZapDevice
-import com.che.zwiftplayhost.ble.zap.ZwiftPlayDevice
-import com.che.zwiftplayhost.utils.Logger
-import com.che.zwiftplayhost.utils.toHexString
+import com.che.common.ble.BleDebugUtils.debugPrintBluetoothService
+import com.che.zap.device.GenericBleUuids.APPEARANCE_CHARACTERISTIC_UUID
+import com.che.zap.device.GenericBleUuids.BATTERY_LEVEL_CHARACTERISTIC_UUID
+import com.che.zap.device.GenericBleUuids.BATTERY_SERVICE_UUID
+import com.che.zap.device.GenericBleUuids.DEVICE_INFORMATION_SERVICE_UUID
+import com.che.zap.device.GenericBleUuids.DEVICE_NAME_CHARACTERISTIC_UUID
+import com.che.zap.device.GenericBleUuids.FIRMWARE_REVISION_STRING_CHARACTERISTIC_UUID
+import com.che.zap.device.GenericBleUuids.GENERIC_ACCESS_SERVICE_UUID
+import com.che.zap.device.GenericBleUuids.GENERIC_ATTRIBUTE_SERVICE_UUID
+import com.che.zap.device.GenericBleUuids.HARDWARE_REVISION_STRING_CHARACTERISTIC_UUID
+import com.che.zap.device.GenericBleUuids.MANUFACTURER_NAME_STRING_CHARACTERISTIC_UUID
+import com.che.zap.device.ZapBleUuids.ZWIFT_CUSTOM_SERVICE_UUID
+import com.che.zap.device.ZapBleUuids.ZWIFT_ASYNC_CHARACTERISTIC_UUID
+import com.che.zap.device.ZapBleUuids.ZWIFT_SYNC_RX_CHARACTERISTIC_UUID
+import com.che.zap.device.ZapBleUuids.ZWIFT_SYNC_TX_CHARACTERISTIC_UUID
+import com.che.zap.device.ZapBleUuids.ZWIFT_UNKNOWN_6_CHARACTERISTIC_UUID
+import com.che.zap.device.GenericBleUuids.SERIAL_NUMBER_STRING_CHARACTERISTIC_UUID
+import com.che.zap.device.GenericBleUuids.SERVICE_CHANGED_CHARACTERISTIC_UUID
+import com.che.zap.device.AbstractZapDevice
+import com.che.zap.play.ZwiftPlayDevice
+import com.che.zap.utils.Logger
+import com.che.zap.utils.toHexString
 import no.nordicsemi.android.ble.BleManager
 import no.nordicsemi.android.ble.data.Data
 import java.util.Collections
@@ -83,17 +84,20 @@ class ZwiftPlayBleManager(context: Context, val isLeft: Boolean) : BleManager(co
 
         val genericAccessService = gatt.getService(GENERIC_ACCESS_SERVICE_UUID)
         if (genericAccessService != null) {
+            //debugPrintBluetoothService("GenericAccessService", genericAccessService)
             deviceNameCharacteristic = genericAccessService.getCharacteristic(DEVICE_NAME_CHARACTERISTIC_UUID)
             appearanceCharacteristic = genericAccessService.getCharacteristic(APPEARANCE_CHARACTERISTIC_UUID)
         }
 
         val genericAttributeService = gatt.getService(GENERIC_ATTRIBUTE_SERVICE_UUID)
         if (genericAttributeService != null) {
+            //debugPrintBluetoothService("GenericAttributeService", genericAttributeService)
             serviceChangedCharacteristic = genericAttributeService.getCharacteristic(SERVICE_CHANGED_CHARACTERISTIC_UUID)
         }
 
         val deviceInfoService = gatt.getService(DEVICE_INFORMATION_SERVICE_UUID)
         if (deviceInfoService != null) {
+            //debugPrintBluetoothService("DeviceInfo", deviceInfoService)
             manufacturerCharacteristic = deviceInfoService.getCharacteristic(MANUFACTURER_NAME_STRING_CHARACTERISTIC_UUID)
             serialCharacteristic = deviceInfoService.getCharacteristic(SERIAL_NUMBER_STRING_CHARACTERISTIC_UUID)
             hardwareRevisionCharacteristic = deviceInfoService.getCharacteristic(HARDWARE_REVISION_STRING_CHARACTERISTIC_UUID)
@@ -111,6 +115,7 @@ class ZwiftPlayBleManager(context: Context, val isLeft: Boolean) : BleManager(co
 
         val batteryService = gatt.getService(BATTERY_SERVICE_UUID)
         if (batteryService != null) {
+            //debugPrintBluetoothService("BatteryService", batteryService)
             batteryCharacteristic = batteryService.getCharacteristic(BATTERY_LEVEL_CHARACTERISTIC_UUID)
         }
 

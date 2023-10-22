@@ -1,20 +1,17 @@
 plugins {
-    alias(libs.plugins.android.application)
+    alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
 }
 
 android {
-    namespace 'com.che.zwiftplayhost'
+    namespace 'com.che.zap'
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.che.zwiftplayhost"
         minSdk 31
-        targetSdk 33
-        versionCode 1
-        versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles "consumer-rules.pro"
     }
 
     buildTypes {
@@ -30,26 +27,18 @@ android {
     kotlinOptions {
         jvmTarget = '1.8'
     }
-    buildFeatures {
-        viewBinding true
-    }
 }
 
 dependencies {
 
-    implementation project(path: ':zaplibrary')
-    implementation project(path: ':commonlibrary')
-
-    // Default app stuff
-    implementation(libs.bundles.base)
-    implementation libs.androidx.constraintlayout
     implementation libs.jakewharton.timber
 
-    // Nordic BLE library to avoid pain
-    implementation libs.ble.ktx
+    // all the crypto
+    implementation libs.bouncy.castle.bcpkix
+    implementation libs.bouncy.castle.prov
 
-    // Lifecycle coroutine scopes
-    implementation libs.androidx.lifecycle.runtime.ktx
+    // warn - only added to hackingly decode, way more dependencies needed to used protobuf for encoding
+    implementation libs.protobuf.javalite
 
     // Test dependencies - unloved but aspirational :(
     testImplementation libs.testing.junit

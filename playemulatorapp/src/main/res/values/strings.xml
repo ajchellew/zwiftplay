@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">Play Emulator</string>
+
+    <string name="service_notification_channel_name">Service</string>
+    <string name="service_notification_channel_summary">Notifications about the BLE service</string>
+</resources>

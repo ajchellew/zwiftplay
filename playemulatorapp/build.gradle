@@ -4,11 +4,12 @@ plugins {
 }
 
 android {
-    namespace 'com.che.zwiftplayhost'
+    namespace 'com.che.zwiftplayemulator'
+
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.che.zwiftplayhost"
+        applicationId "com.che.zwiftplayemulator"
         minSdk 31
         targetSdk 33
         versionCode 1
@@ -37,19 +38,12 @@ android {
 
 dependencies {
 
-    implementation project(path: ':zaplibrary')
     implementation project(path: ':commonlibrary')
+    implementation project(path: ':zaplibrary')
 
-    // Default app stuff
     implementation(libs.bundles.base)
     implementation libs.androidx.constraintlayout
-    implementation libs.jakewharton.timber
-
-    // Nordic BLE library to avoid pain
-    implementation libs.ble.ktx
-
-    // Lifecycle coroutine scopes
-    implementation libs.androidx.lifecycle.runtime.ktx
+    implementation(libs.jakewharton.timber)
 
     // Test dependencies - unloved but aspirational :(
     testImplementation libs.testing.junit

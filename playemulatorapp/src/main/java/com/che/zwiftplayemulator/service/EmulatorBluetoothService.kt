@@ -103,16 +103,7 @@ class EmulatorBluetoothService : Service() {
     }
 
     private fun startAdvertising() {
-
-        // wouldn't start advertising with this
-        /*previousName = bluetoothManager.adapter.name
-        Timber.d("Old Bluetooth Name '$previousName'")
-        val isNameChanged = bluetoothManager.adapter.setName("Zwift Play *Wink*")
-        if (isNameChanged) Timber.d("New Bluetooth Name '${bluetoothManager.adapter.name}'")*/
-        val isNameChanged = false
-
-        advertiserManager.start(true, isNameChanged)
-        advertiserManager.start(false, isNameChanged)
+        advertiserManager.start()
     }
 
     private fun stopAdvertising() {

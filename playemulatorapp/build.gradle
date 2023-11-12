@@ -45,6 +45,9 @@ dependencies {
     implementation libs.androidx.constraintlayout
     implementation(libs.jakewharton.timber)
 
+    // Nordic BLE library to avoid pain
+    implementation libs.ble.ktx
+
     // Test dependencies - unloved but aspirational :(
     testImplementation libs.testing.junit
     androidTestImplementation(libs.bundles.test)

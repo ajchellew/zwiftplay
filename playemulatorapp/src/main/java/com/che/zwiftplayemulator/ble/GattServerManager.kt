@@ -7,25 +7,129 @@ import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothGattServer
 import android.bluetooth.BluetoothGattServerCallback
+import android.bluetooth.BluetoothGattService
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.content.Context
+import com.che.zap.device.GenericBleUuids
+import com.che.zap.device.GenericBleUuids.BATTERY_LEVEL_CHARACTERISTIC_UUID
+import com.che.zap.device.GenericBleUuids.BATTERY_SERVICE_UUID
+import com.che.zap.device.GenericBleUuids.DEFAULT_DESCRIPTOR_UUID
+import com.che.zap.device.GenericBleUuids.DEVICE_NAME_CHARACTERISTIC_UUID
+import com.che.zap.device.GenericBleUuids.GENERIC_ACCESS_SERVICE_UUID
+import com.che.zap.device.GenericBleUuids.GENERIC_ATTRIBUTE_SERVICE_UUID
 import com.che.zap.utils.Logger
 import com.che.zwiftplayemulator.ble.gattservices.BatteryService
 import com.che.zwiftplayemulator.ble.gattservices.DeviceInformationService
 import com.che.zwiftplayemulator.ble.gattservices.GenericAccessService
 import com.che.zwiftplayemulator.ble.gattservices.GenericAttributeService
 import com.che.zwiftplayemulator.ble.gattservices.ZapService
+import no.nordicsemi.android.ble.BleManager
+import no.nordicsemi.android.ble.BleServerManager
+import no.nordicsemi.android.ble.observer.ServerObserver
+import java.nio.charset.StandardCharsets
+import java.util.Collections
+
+private class ControllerServerManager(val context: Context) : BleServerManager(context), ServerObserver {
+
+    private val batteryCharacteristic = sharedCharacteristic(
+        BATTERY_LEVEL_CHARACTERISTIC_UUID,
+        BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_NOTIFY,
+        BluetoothGattCharacteristic.PERMISSION_READ,
+        descriptor(
+            DEFAULT_DESCRIPTOR_UUID,
+            0,
+            byteArrayOf(0)
+        )
+        //description("A characteristic to be read", false) // descriptors
+    )
+
+    private val deviceNameCharacteristic = sharedCharacteristic(
+        DEVICE_NAME_CHARACTERISTIC_UUID,
+        BluetoothGattCharacteristic.PROPERTY_READ,
+        BluetoothGattCharacteristic.PERMISSION_READ
+    )
+
+    private val genericAccessServiceGattService = service(GENERIC_ACCESS_SERVICE_UUID, deviceNameCharacteristic)
+    private val batteryGattService = service(BATTERY_SERVICE_UUID, batteryCharacteristic)
+
+    private val myGattServices = arrayListOf(genericAccessServiceGattService, batteryGattService)
+
+    private val serverConnections = mutableMapOf<String, ServerConnection>()
+
+
+    fun setBatteryCharacteristicValue(value: String) {
+        val bytes = value.toByteArray(StandardCharsets.UTF_8)
+        serverConnections.values.forEach { serverConnection ->
+            serverConnection.sendNotificationForBatteryLevelCharacteristic(bytes)
+        }
+    }
+
+    override fun initializeServer(): List<BluetoothGattService> {
+        setServerObserver(this)
+        return myGattServices
+    }
+
+    override fun onServerReady() {
+        Logger.d( "Gatt server ready")
+    }
+
+    override fun onDeviceConnectedToServer(device: BluetoothDevice) {
+        Logger.d( "Device connected ${device.address}")
+
+        // A new device connected to the phone. Connect back to it, so it could be used
+        // both as server and client. Even if client mode will not be used, currently this is
+        // required for the server-only use.
+        serverConnections[device.address] = ServerConnection().apply {
+            useServer(this@ControllerServerManager)
+            //attachClientConnection(device)
+            connect(device).enqueue()
+        }
+    }
+
+    override fun onDeviceDisconnectedFromServer(device: BluetoothDevice) {
+        Logger.d("Device disconnected ${device.address}")
+
+        // The device has disconnected. Forget it and close.
+        serverConnections.remove(device.address)?.close()
+    }
+
+    /*
+     * Manages the state of an individual server connection (there can be many of these)
+     */
+    inner class ServerConnection : BleManager(context) {
+
+        fun sendNotificationForBatteryLevelCharacteristic(value: ByteArray) {
+            sendNotification(batteryCharacteristic, value).enqueue()
+        }
+
+        override fun log(priority: Int, message: String) {
+            Logger.d(message)
+        }
+
+        // There are no services that we need from the connecting device, but
+        // if there were, we could specify them here.
+        override fun isRequiredServiceSupported(gatt: BluetoothGatt): Boolean {
+            return true
+        }
+
+        override fun onServicesInvalidated() {
+            // This is the place to nullify characteristics obtained above.
+        }
+    }
+}
 
 @SuppressLint("MissingPermission")
 class GattServerManager(context: Context, bluetoothManager: BluetoothManager) {
 
-    private var leftGattServer: ControllerGattServer = ControllerGattServer(context, bluetoothManager)
-    private var rightGattServer: ControllerGattServer = ControllerGattServer(context, bluetoothManager)
+    private var leftGattServer: ControllerServerManager = ControllerServerManager(context)
+    private var rightGattServer: ControllerServerManager = ControllerServerManager(context)
 
     fun start() {
-        leftGattServer.start()
-        rightGattServer.start()
+        //leftGattServer.start()
+        //rightGattServer.start()
+        leftGattServer.open()
+        rightGattServer.open()
     }
 }
 
@@ -45,11 +149,14 @@ class ControllerGattServer(private val context: Context, private val bluetoothMa
         val batteryService = BatteryService()
 
         bluetoothGattServer = bluetoothManager.openGattServer(context, gattServerCallback)
-        bluetoothGattServer?.addService(genericAccessService) ?: Logger.e("Failed to add GattService")
-        bluetoothGattServer?.addService(genericAttributeService) ?: Logger.e("Failed to add GattService")
-        bluetoothGattServer?.addService(deviceInformationService) ?: Logger.e("Failed to add GattService")
-        bluetoothGattServer?.addService(zapService) ?: Logger.e("Failed to add GattService")
-        bluetoothGattServer?.addService(batteryService) ?: Logger.e("Failed to add GattService")
+        bluetoothGattServer?.let {
+
+            it.addService(genericAccessService)
+            it.addService(genericAttributeService)
+            it.addService(deviceInformationService)
+            it.addService(zapService)
+            it.addService(batteryService)
+        }
         Logger.d("Started GattServer")
     }
 
@@ -58,6 +165,11 @@ class ControllerGattServer(private val context: Context, private val bluetoothMa
      * All read/write requests for characteristics and descriptors are handled here.
      */
     private val gattServerCallback = object : BluetoothGattServerCallback() {
+
+        override fun onServiceAdded(status: Int, service: BluetoothGattService?) {
+            super.onServiceAdded(status, service)
+            Logger.i("onServiceAdded $status ${service?.uuid ?: ""}")
+        }
 
         override fun onConnectionStateChange(device: BluetoothDevice, status: Int, newState: Int) {
             if (newState == BluetoothProfile.STATE_CONNECTED) {
@@ -176,6 +288,8 @@ class ControllerGattServer(private val context: Context, private val bluetoothMa
             }
             //}
         }
+
+
     }
 
 }

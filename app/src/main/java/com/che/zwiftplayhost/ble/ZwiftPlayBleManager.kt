@@ -91,7 +91,7 @@ class ZwiftPlayBleManager(context: Context, val isLeft: Boolean) : BleManager(co
 
         val genericAttributeService = gatt.getService(GENERIC_ATTRIBUTE_SERVICE_UUID)
         if (genericAttributeService != null) {
-            //debugPrintBluetoothService("GenericAttributeService", genericAttributeService)
+            debugPrintBluetoothService("GenericAttributeService", genericAttributeService)
             serviceChangedCharacteristic = genericAttributeService.getCharacteristic(SERVICE_CHANGED_CHARACTERISTIC_UUID)
         }
 
@@ -164,19 +164,19 @@ class ZwiftPlayBleManager(context: Context, val isLeft: Boolean) : BleManager(co
 
         beginAtomicRequestQueue()
             .add(enableIndications(serviceChangedCharacteristic)
-                .fail { _: BluetoothDevice?, status: Int -> failCallback(status) }
+                .fail { _: BluetoothDevice?, status: Int -> failCallback(serviceChangedCharacteristic!!, status) }
             )
             .add(enableNotifications(asyncCharacteristic)
-                .fail { _: BluetoothDevice?, status: Int -> failCallback(status) }
+                .fail { _: BluetoothDevice?, status: Int -> failCallback(asyncCharacteristic!!, status) }
             )
             .add(enableIndications(syncTxCharacteristic)
-                .fail { _: BluetoothDevice?, status: Int -> failCallback(status) }
+                .fail { _: BluetoothDevice?, status: Int -> failCallback(syncTxCharacteristic!!, status) }
             )
             .add(enableIndications(unknown6Characteristic)
-                .fail { _: BluetoothDevice?, status: Int -> failCallback(status) }
+                .fail { _: BluetoothDevice?, status: Int -> failCallback(unknown6Characteristic!!, status) }
             )
             .add(enableNotifications(batteryCharacteristic)
-                .fail { _: BluetoothDevice?, status: Int -> failCallback(status) }
+                .fail { _: BluetoothDevice?, status: Int -> failCallback(batteryCharacteristic!!, status) }
             )
             .add(readCharacteristic(deviceNameCharacteristic).with { _, data ->
                 getStringValue(data)?.let {
@@ -238,8 +238,8 @@ class ZwiftPlayBleManager(context: Context, val isLeft: Boolean) : BleManager(co
 
     private fun byteToInt(data: Data) = data.getByte(0)?.toInt() ?: Int.MIN_VALUE
 
-    private fun failCallback(status: Int) {
-        log(Log.ERROR, "Could not subscribe: $status")
+    private fun failCallback(characteristic: BluetoothGattCharacteristic, status: Int) {
+        Logger.e("Could not subscribe: ${characteristic.uuid} $status")
         disconnect().enqueue()
     }
 

@@ -14,7 +14,20 @@ import java.nio.ByteBuffer
 @SuppressLint("MissingPermission")
 class AdvertiserManager(private val bluetoothLeAdvertiser: BluetoothLeAdvertiser) {
 
-    fun start(isRight: Boolean, broadcastName: Boolean) {
+    fun start() {
+
+        // wouldn't start advertising with this
+        /*previousName = bluetoothManager.adapter.name
+        Timber.d("Old Bluetooth Name '$previousName'")
+        val isNameChanged = bluetoothManager.adapter.setName("Zwift Play *Wink*")
+        if (isNameChanged) Timber.d("New Bluetooth Name '${bluetoothManager.adapter.name}'")*/
+        val isNameChanged = false
+
+        start(true, isNameChanged)
+        //start(false, isNameChanged)
+    }
+
+    private fun start(isRight: Boolean, broadcastName: Boolean) {
 
         val manufacturerData = ByteBuffer
             .allocate(5)

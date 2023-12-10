@@ -8,8 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="HKDF.Standard" Version="2.0.0" />
     <PackageReference Include="InTheHand.BluetoothLE" Version="4.0.35" />
+    <PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
   </ItemGroup>
 
 </Project>

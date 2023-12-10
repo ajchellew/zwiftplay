@@ -20,8 +20,7 @@ public abstract class AbstractZapDevice
         buffer.WriteBytes(ZapConstants.RIDE_ON);
         buffer.WriteBytes(ZapConstants.REQUEST_START);
         buffer.WriteBytes(_localKeyProvider.GetPublicKeyBytes());
-        var start = buffer.ToArray();
-        return start;
+        return buffer.ToArray();
     }
 
     public void ProcessCharacteristic(string characteristicName, byte[] bytes)
@@ -65,6 +64,7 @@ public abstract class AbstractZapDevice
         Array.Copy(bytes, headerSize, devicePublicKeyBytes, 0, devicePublicKeyBytes.Length);
 
         _zapEncryption.Initialise(devicePublicKeyBytes);
+
         Console.WriteLine($"Device Public Key - ${Utils.Utils.ByteArrayToStringHex(devicePublicKeyBytes)}");
     }
 }

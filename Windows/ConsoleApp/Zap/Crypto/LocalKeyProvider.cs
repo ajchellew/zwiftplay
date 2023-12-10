@@ -1,30 +1,62 @@
-﻿using System.Security.Cryptography;
+﻿using Org.BouncyCastle.Asn1.X9;
+using Org.BouncyCastle.Crypto;
+using Org.BouncyCastle.Crypto.Generators;
+using Org.BouncyCastle.Crypto.Parameters;
+using Org.BouncyCastle.Security;
+using ZwiftPlayConsoleApp.Utils;
 
 namespace ZwiftPlayConsoleApp.Zap.Crypto;
 
 public class LocalKeyProvider
 {
-    private readonly ECDsa _ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+    private readonly SecureRandom _rngCsp = new();
+
+    internal readonly ECDomainParameters _ecParameters;
+    private readonly ECPublicKeyParameters _publicKey;
+    private readonly IBasicAgreement _ecdhKeyAgreement;
+
+    public LocalKeyProvider()
+    {
+        var curve = ECNamedCurveTable.GetByName("secp256r1");
+        _ecParameters = new ECDomainParameters(curve.Curve, curve.G, curve.N);
+
+        var keyGeneratorParams = new ECKeyGenerationParameters(_ecParameters, _rngCsp);
+        var keyGenerator = new ECKeyPairGenerator("ECDH");
+        keyGenerator.Init(keyGeneratorParams);
+        var keyPair = keyGenerator.GenerateKeyPair();
+        var privateKey = keyPair.Private as ECPrivateKeyParameters;
+        if (keyPair.Public is not ECPublicKeyParameters ecPublicKeyParameters)
+        {
+            throw new ArgumentException("How is this null");
+        }
+        _publicKey = ecPublicKeyParameters;
+
+        var keyAgreement = AgreementUtilities.GetBasicAgreement("ECDH");
+        keyAgreement.Init(privateKey);
+        _ecdhKeyAgreement = keyAgreement;
+    }
 
     public byte[] GetPublicKeyBytes()
     {
-        // have checked this. fairly sure this is the public key in uncompressed format.
+        var allKeyBytes = _publicKey.Q.GetEncoded(false);
 
-        return EncryptionUtils.EcParamsToPublicKeyBytes(_ecdsa.ExportParameters(false));
+        // trim off the 4 that says its a compressed encoding.
+        var publicKeyRawByteArrayTrimmed = new byte[64];
+        Array.Copy(allKeyBytes, 1, publicKeyRawByteArrayTrimmed, 0, allKeyBytes.Length - 1);
+        return publicKeyRawByteArrayTrimmed;
     }
 
-    public ECParameters GetParams()
+    public byte[] GetSharedSecret(byte[] publicKeyIn)
     {
-        return _ecdsa.ExportParameters(false);
-    }
+        // put the byte back on so its known that its an uncompressed encoded export
+        var buffer = new ByteBuffer();
+        buffer.WriteByte(4);
+        buffer.WriteBytes(publicKeyIn);
 
-    public ECParameters GetParamsWithPrivateKey()
-    {
-        return _ecdsa.ExportParameters(true);
-    }
+        var point = _ecParameters.Curve.DecodePoint(buffer.ToArray());
+        var otherPubKey = new ECPublicKeyParameters(point, _ecParameters);
 
-    public byte[] GetPrivateKey()
-    {
-        return _ecdsa.ExportECPrivateKey();
+        var secret = _ecdhKeyAgreement.CalculateAgreement(otherPubKey);
+        return secret.ToByteArrayUnsigned();
     }
 }

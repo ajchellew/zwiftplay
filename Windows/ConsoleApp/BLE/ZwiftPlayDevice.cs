@@ -1,5 +1,6 @@
 ﻿using ZwiftPlayConsoleApp.Utils;
 using ZwiftPlayConsoleApp.Zap;
+using ZwiftPlayConsoleApp.Zap.Crypto;
 using ZwiftPlayConsoleApp.Zap.Proto;
 
 namespace ZwiftPlayConsoleApp.BLE;
@@ -12,20 +13,20 @@ public class ZwiftPlayDevice : AbstractZapDevice
     {
         try
         {
-
             //if (LOG_RAW) Timber.d("Decrypted: ${bytes.toHexString()}")
 
             var counterBytes = new byte[4];
             Array.Copy(bytes, 0, counterBytes, 0, counterBytes.Length);
             var counter = new ByteBuffer(counterBytes).ReadInt32();
 
-            var payloadBytes = new byte[bytes.Length - 8];
+            var payloadBytes = new byte[bytes.Length - 4 - EncryptionUtils.MAC_LENGTH];
             Array.Copy(bytes, 4, payloadBytes, 0, payloadBytes.Length);
 
-            var tagBytes = new byte[4];
-            Array.Copy(bytes, 4 + payloadBytes.Length, tagBytes, 0, tagBytes.Length);
+            var tagBytes = new byte[EncryptionUtils.MAC_LENGTH];
+            Array.Copy(bytes, EncryptionUtils.MAC_LENGTH + payloadBytes.Length, tagBytes, 0, tagBytes.Length);
 
             var data = _zapEncryption.Decrypt(counter, payloadBytes, tagBytes);
+            
             var type = data[0];
 
             var messageBytes = new byte[data.Length - 1];
@@ -46,7 +47,6 @@ public class ZwiftPlayDevice : AbstractZapDevice
                         _batteryLevel = notification.Level;
                         Console.WriteLine("Battery level update: $batteryLevel");
                     }
-
                     break;
                 default:
                     Console.WriteLine($"Unprocessed - Type: {type} Data: {Utils.Utils.ByteArrayToStringHex(data)}");

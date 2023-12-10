@@ -1,5 +1,4 @@
 ﻿using System.Security.Cryptography;
-using HkdfStandard;
 using ZwiftPlayConsoleApp.Utils;
 
 namespace ZwiftPlayConsoleApp.Zap.Crypto;
@@ -12,7 +11,6 @@ public class ZapCrypto
     private byte[] _ivBytes;
 
     private AesCcm _aesCcm;
-
 
     public ZapCrypto(LocalKeyProvider localKeyProvider)
     {
@@ -39,7 +37,6 @@ public class ZapCrypto
     {
         var buffer = new ByteBuffer();
         buffer.WriteBytes(_ivBytes);
-        // todo endianness ??
         buffer.WriteInt32(counter);
         var nonceBytes = buffer.ToArray();
 
@@ -52,58 +49,13 @@ public class ZapCrypto
 
     private byte[] GenerateHmacKeyDerivationFunctionBytes(byte[] devicePublicKeyBytes)
     {
-        var serverPublicKey = GeneratePublicKey(devicePublicKeyBytes, _localKeyProvider.GetParams());
-
         var saltBuffer = new ByteBuffer();
-        saltBuffer.WriteBytes(EncryptionUtils.EcParamsToPublicKeyBytes(serverPublicKey.ExportParameters()));
+        saltBuffer.WriteBytes(devicePublicKeyBytes);
         saltBuffer.WriteBytes(_localKeyProvider.GetPublicKeyBytes());
         var salt = saltBuffer.ToArray();
 
-        var sharedSecretBytes = GenerateSharedSecretBytes(_localKeyProvider.GetParamsWithPrivateKey(), serverPublicKey);
+        var sharedSecretBytes = _localKeyProvider.GetSharedSecret(devicePublicKeyBytes);
 
-        return GenerateHKDFBytes(sharedSecretBytes, salt);
-    }
-
-    private ECDiffieHellmanPublicKey GeneratePublicKey(byte[] devicePublicKeyBytes, ECParameters ecParameters)
-    {
-        // think this is ok
-
-        var xBytes = new byte[32];
-        Array.Copy(devicePublicKeyBytes, 0, xBytes, 0, xBytes.Length);
-        var yBytes = new byte[32];
-        Array.Copy(devicePublicKeyBytes, 32, yBytes, 0, yBytes.Length);
-
-        var devicePublicKeyPoint = new ECPoint { X = xBytes, Y = yBytes };
-
-        var remoteParameters = new ECParameters { Curve = ecParameters.Curve, Q = devicePublicKeyPoint };
-        var remoteEcdh = ECDiffieHellman.Create(remoteParameters);
-        return remoteEcdh.PublicKey;
-    }
-
-    private byte[] GenerateSharedSecretBytes(/*byte[] privateKey,*/ECParameters parameters, ECDiffieHellmanPublicKey serverPublicKey)
-    {
-        var ecdh = new ECDiffieHellmanCng();
-        ecdh.ImportParameters(parameters);
-
-        return ecdh.DeriveKeyMaterial(serverPublicKey);
-
-        //ecdh.DeriveKeyFromHmac() -??
-    }
-
-    private byte[] GenerateHKDFBytes(byte[] sharedSecretBytes, byte[] salt)
-    {
-        /*var hmacKey = ecdh.DeriveKeyFromHmac(serverPublicKey, HashAlgorithmName.SHA256, salt);
-        return hmacKey;*/
-
-        /*var hmac = new HMACSHA256();
-        hmac.Key = sharedSecretBytes;
-        hmac.Initialize();*/
-
-        /*var hmac = new HMACSHA256(sharedSecretBytes);
-        byte[] result = hmac.ComputeHash(salt);*/
-
-        return Hkdf.DeriveKey(HashAlgorithmName.SHA256, sharedSecretBytes, EncryptionUtils.HKDF_LENGTH, salt);
-
-        //return Hkdf.Expand(HashAlgorithmName.SHA256, sharedSecretBytes, EncryptionUtils.HKDF_LENGTH, salt);
+        return HKDF.DeriveKey(HashAlgorithmName.SHA256, sharedSecretBytes, EncryptionUtils.HKDF_LENGTH, salt);
     }
 }

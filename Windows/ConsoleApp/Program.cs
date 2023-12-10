@@ -1,4 +1,5 @@
-﻿using InTheHand.Bluetooth;
+﻿using ABI.Windows.ApplicationModel.UserDataTasks;
+using InTheHand.Bluetooth;
 using ZwiftPlayConsoleApp.BLE;
 using ZwiftPlayConsoleApp.Zap;
 
@@ -8,10 +9,23 @@ public class Program
 
     public static void Main(string[] args)
     {
+        // bluetooth availablity on PC.
+
+        var available = Bluetooth.GetAvailabilityAsync().GetAwaiter().GetResult();
+        if (!available)
+        {
+            throw new ArgumentException("Need Bluetooth");
+        }
+
+        /*Bluetooth.AvailabilityChanged += delegate(object? sender, EventArgs eventArgs)
+        {
+            Console.WriteLine("BLE Availability Changed:" + eventArgs.ToString());
+        };*/
 
         Bluetooth.AdvertisementReceived += (sender, scanResult) =>
         {
-            if (scanResult.Device?.Name != "Zwift Play")
+            // not always getting name... so checking for the manufacturer data.
+            if (!scanResult.ManufacturerData.ContainsKey(ZapConstants.ZWIFT_MANUFACTURER_ID))
             {
                 return;
             }
@@ -37,10 +51,18 @@ public class Program
 
             clientManager.ConnectAsync();
         };
-        
 
-        Bluetooth.RequestLEScanAsync();
-
+        // keep scanning until we find both controllers.
+        Task.Run(async () =>
+        {
+            while (_bleManagers.Count < 2)
+            {
+                Console.WriteLine("Start BLE Scan - Connected " + _bleManagers.Count + "/2");
+                await Bluetooth.RequestLEScanAsync();
+                await Task.Delay(30000);
+            }
+            Console.WriteLine("BLE Scan - loop done");
+        });
 
         var run = true;
         while (run)

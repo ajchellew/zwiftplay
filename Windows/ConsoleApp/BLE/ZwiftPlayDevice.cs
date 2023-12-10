@@ -8,6 +8,7 @@ namespace ZwiftPlayConsoleApp.BLE;
 public class ZwiftPlayDevice : AbstractZapDevice
 {
     private int _batteryLevel;
+    private ControllerNotification? _lastButtonState;
 
     protected override void ProcessEncryptedData(byte[] bytes)
     {
@@ -38,14 +39,15 @@ public class ZwiftPlayDevice : AbstractZapDevice
                     ProcessButtonNotification(new ControllerNotification(messageBytes));
                     break;
                 case ZapConstants.EMPTY_MESSAGE_TYPE:
-                    Console.WriteLine("Empty Message");
+                    if (Debug)
+                        Console.WriteLine("Empty Message");
                     break;
                 case ZapConstants.BATTERY_LEVEL_TYPE:
                     var notification = new BatteryStatus(messageBytes);
                     if (_batteryLevel != notification.Level)
                     {
                         _batteryLevel = notification.Level;
-                        Console.WriteLine("Battery level update: $batteryLevel");
+                        Console.WriteLine($"Battery level update: {_batteryLevel}");
                     }
                     break;
                 default:
@@ -59,8 +61,21 @@ public class ZwiftPlayDevice : AbstractZapDevice
         }
     }
 
-    private void ProcessButtonNotification(ControllerNotification controllerNotification)
+    private void ProcessButtonNotification(ControllerNotification notification)
     {
-        
+        if (_lastButtonState == null)
+        {
+            Console.WriteLine(notification.ToString());
+        }
+        else
+        {
+            var diff = notification.Diff(_lastButtonState);
+            if (!string.IsNullOrEmpty(diff)) // get repeats of the same state
+            {
+                Console.WriteLine(diff);
+            }
+        }
+
+        _lastButtonState = notification;
     }
 }

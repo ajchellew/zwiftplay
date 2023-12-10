@@ -6,6 +6,8 @@ namespace ZwiftPlayConsoleApp.BLE;
 
 public abstract class AbstractZapDevice
 {
+    public static bool Debug = false;
+
     private readonly LocalKeyProvider _localKeyProvider = new();
     protected readonly ZapCrypto _zapEncryption;
 
@@ -25,9 +27,8 @@ public abstract class AbstractZapDevice
 
     public void ProcessCharacteristic(string characteristicName, byte[] bytes)
     {
-        //if (bytes == null) return;
-
-        Console.WriteLine($"{characteristicName} {Utils.Utils.ByteArrayToStringHex(bytes)}");
+        if (Debug)
+            Console.WriteLine($"{characteristicName} {Utils.Utils.ByteArrayToStringHex(bytes)}");
 
         // todo make better like below kotlin
         if (bytes[0] == ZapConstants.RIDE_ON[0] && bytes[1] == ZapConstants.RIDE_ON[1] && bytes[2] == ZapConstants.RIDE_ON[2] && bytes[3] == ZapConstants.RIDE_ON[3])
@@ -65,6 +66,7 @@ public abstract class AbstractZapDevice
 
         _zapEncryption.Initialise(devicePublicKeyBytes);
 
-        Console.WriteLine($"Device Public Key - ${Utils.Utils.ByteArrayToStringHex(devicePublicKeyBytes)}");
+        if (Debug)
+            Console.WriteLine($"Device Public Key - ${Utils.Utils.ByteArrayToStringHex(devicePublicKeyBytes)}");
     }
 }

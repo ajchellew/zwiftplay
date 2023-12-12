@@ -61,18 +61,31 @@ public class ZwiftPlayDevice : AbstractZapDevice
         }
     }
 
+    private const bool SendKeys = false;
+
     private void ProcessButtonNotification(ControllerNotification notification)
     {
-        if (_lastButtonState == null)
+        if (SendKeys)
         {
-            Console.WriteLine(notification.ToString());
+            var changes = notification.DiffChange(_lastButtonState);
+            foreach (var change in changes)
+            {
+                KeyboardKeys.ProcessZwiftPlay(change);
+            }
         }
         else
         {
-            var diff = notification.Diff(_lastButtonState);
-            if (!string.IsNullOrEmpty(diff)) // get repeats of the same state
+            if (_lastButtonState == null)
             {
-                Console.WriteLine(diff);
+                Console.WriteLine(notification.ToString());
+            }
+            else
+            {
+                var diff = notification.Diff(_lastButtonState);
+                if (!string.IsNullOrEmpty(diff)) // get repeats of the same state
+                {
+                    Console.WriteLine(diff);
+                }
             }
         }
 

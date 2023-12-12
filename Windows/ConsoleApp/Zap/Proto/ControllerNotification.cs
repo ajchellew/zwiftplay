@@ -1,4 +1,5 @@
 ﻿using Google.Protobuf;
+using ZwiftPlayConsoleApp.BLE;
 
 namespace ZwiftPlayConsoleApp.Zap.Proto;
 
@@ -144,6 +145,29 @@ public class ControllerNotification
         text += ")";
         return text;
     }
+
+    public ButtonChange[] DiffChange(ControllerNotification? previousNotification)
+    {
+        var diffList = new List<ButtonChange>();
+        DiffChange(diffList, _isRightController ? ZwiftPlayButton.Y : ZwiftPlayButton.Up, buttonYPressed, previousNotification?.buttonYPressed ?? false);
+        DiffChange(diffList, _isRightController ? ZwiftPlayButton.Z : ZwiftPlayButton.Left, buttonZPressed, previousNotification?.buttonZPressed ?? false);
+        DiffChange(diffList, _isRightController ? ZwiftPlayButton.A : ZwiftPlayButton.Right, buttonAPressed, previousNotification?.buttonAPressed ?? false);
+        DiffChange(diffList, _isRightController ? ZwiftPlayButton.B : ZwiftPlayButton.Down, buttonBPressed, previousNotification?.buttonBPressed ?? false);
+        DiffChange(diffList, _isRightController ? ZwiftPlayButton.RightShoulder : ZwiftPlayButton.LeftShoulder, shoulderButtonPressed, previousNotification?.shoulderButtonPressed ?? false);
+        DiffChange(diffList, _isRightController ? ZwiftPlayButton.RightPower: ZwiftPlayButton.LeftPower, powerButtonPressed, previousNotification?.powerButtonPressed ?? false);
+        //diff += Diff(STEER_NAME, steerBrakeValue, previousNotification.steerBrakeValue);
+        //diff += Diff(UNKNOWN_NAME, somethingValue, previousNotification.somethingValue);
+        return diffList.ToArray();
+    }
+
+    private void DiffChange(List<ButtonChange> changes, ZwiftPlayButton button, bool pressedValue, bool oldPressedValue)
+    {
+        if (pressedValue != oldPressedValue)
+        {
+            changes.Add(new ButtonChange(){ Button = button, IsPressed = pressedValue });
+        }
+    }
+
 }
 
 public class ProtoUtils

@@ -4,6 +4,7 @@ import com.che.zap.device.ZapConstants.BATTERY_LEVEL_TYPE
 import com.che.zap.device.ZapConstants.CONTROLLER_NOTIFICATION_MESSAGE_TYPE
 import com.che.zap.device.ZapConstants.EMPTY_MESSAGE_TYPE
 import com.che.zap.device.AbstractZapDevice
+import com.che.zap.device.ZapConstants.CLICK_TYPE
 import com.che.zap.proto.BatteryStatus
 import com.che.zap.proto.ControllerNotification
 import com.che.zap.utils.Logger
@@ -31,6 +32,7 @@ class ZwiftPlayDevice : AbstractZapDevice() {
 
             when (type) {
                 CONTROLLER_NOTIFICATION_MESSAGE_TYPE -> processButtonNotification(ControllerNotification(message))
+                CLICK_TYPE -> processClickButtonNotification(data)
                 EMPTY_MESSAGE_TYPE -> if (LOG_RAW) Logger.d("Empty Message") // expected when nothing happening
                 BATTERY_LEVEL_TYPE -> {
                     val notification = BatteryStatus(message)
@@ -56,6 +58,17 @@ class ZwiftPlayDevice : AbstractZapDevice() {
                 Logger.d(diff)
         }
         lastButtonState = notification
+    }
+
+    private fun processClickButtonNotification(data: ByteArray) {
+        //Logger.d("Click Button Press ${data.toHexString()}")
+        if(data.size == 5) {
+            if(data[4] == 0.toByte()) {
+                Logger.d("Click '-' Button Press")
+            } else if(data[2] == 0.toByte()) {
+                Logger.d("Click '+' Button Press")
+            }
+        }
     }
 }
 

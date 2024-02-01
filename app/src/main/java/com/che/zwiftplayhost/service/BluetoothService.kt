@@ -20,6 +20,7 @@ import androidx.core.util.isEmpty
 import com.che.zap.device.ZapConstants.ZWIFT_MANUFACTURER_ID
 import com.che.zap.device.ZapConstants.RC1_LEFT_SIDE
 import com.che.zap.device.ZapConstants.RC1_RIGHT_SIDE
+import com.che.zap.device.ZapConstants.ZWIFT_CLICK
 import com.che.zwiftplayhost.R
 import com.che.zwiftplayhost.ble.BleControllerScanner
 import com.che.zwiftplayhost.ble.ZwiftPlayBleManager
@@ -171,7 +172,7 @@ class BluetoothService : Service() {
 
             // We expect a device of BrevetDeviceType.RC1 which is 2 or 3 depending on which side it is
             val typeByte = data[0]
-            if (typeByte != RC1_LEFT_SIDE && typeByte != RC1_RIGHT_SIDE) return
+            if (typeByte != RC1_LEFT_SIDE && typeByte != RC1_RIGHT_SIDE && typeByte != ZWIFT_CLICK) return
 
             val clientManager = ZwiftPlayBleManager(this, typeByte == RC1_LEFT_SIDE)
             clientManager.registerListener(bleManagerCallback)

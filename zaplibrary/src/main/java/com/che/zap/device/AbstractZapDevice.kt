@@ -3,6 +3,9 @@ package com.che.zap.device
 import com.che.zap.crypto.EncryptionUtils
 import com.che.zap.crypto.LocalKeyProvider
 import com.che.zap.crypto.ZapCrypto
+import com.che.zap.device.ZapConstants.BATTERY_LEVEL_TYPE
+import com.che.zap.device.ZapConstants.EMPTY_MESSAGE_TYPE
+import com.che.zap.proto.BatteryStatus
 import com.che.zap.utils.Logger
 import com.che.zap.utils.startsWith
 import com.che.zap.utils.toHexString
@@ -12,11 +15,20 @@ abstract class AbstractZapDevice {
 
     companion object {
         internal const val LOG_RAW = false
+
+        // As cagnulein found out you can bypass all the crypto and just get the protocol buffer data.
+        // useful if you are using the Zwift hardware for something else.
+        internal const val ENCRYPTED = false
     }
 
+    // only if encrypted = true
     private var devicePublicKeyBytes: ByteArray? = null
     private var localKeyProvider = LocalKeyProvider()
-    protected var zapEncryption = ZapCrypto(localKeyProvider)
+    private var zapEncryption = ZapCrypto(localKeyProvider)
+
+    // you get battery level in a BLE characteristic and via a ZAP message.
+    // technically all zap devices might not have batteries. but this is just a test app
+    private var batteryLevel = 0
 
     fun processCharacteristic(characteristicName: String, bytes: ByteArray?) {
         if (bytes == null) return
@@ -25,18 +37,59 @@ abstract class AbstractZapDevice {
 
         when {
             bytes.startsWith(ZapConstants.RIDE_ON.plus(ZapConstants.RESPONSE_START)) -> processDevicePublicKeyResponse(bytes)
-            bytes.size > Int.SIZE_BYTES + EncryptionUtils.MAC_LENGTH -> processEncryptedData(bytes)
+            bytes.contentEquals(ZapConstants.RIDE_ON) -> Logger.e("Empty RideOn response - unencrypted mode")
+            !ENCRYPTED || (bytes.size > Int.SIZE_BYTES + EncryptionUtils.MAC_LENGTH) -> processData(bytes)
             else -> Logger.e("Unprocessed - Data Type: ${bytes.toHexString()}")
         }
     }
 
-    abstract fun processEncryptedData(bytes: ByteArray)
+    private fun processData(bytes: ByteArray) {
+        try {
+
+            if (LOG_RAW) Timber.d("Data: ${bytes.toHexString()}")
+
+            val type: Byte
+            val message: ByteArray
+
+            if (ENCRYPTED) {
+                val counter = bytes.copyOfRange(0, Int.SIZE_BYTES)
+                val payload = bytes.copyOfRange(Int.SIZE_BYTES, bytes.size)
+
+                val data = zapEncryption.decrypt(counter, payload)
+                type = data[0]
+                message = data.copyOfRange(1, data.size)
+            } else {
+                type = bytes[0]
+                message = bytes.copyOfRange(1, bytes.size)
+            }
+
+            when (type) {
+                EMPTY_MESSAGE_TYPE -> if (LOG_RAW) Logger.d("Empty Message") // expected when nothing happening
+                BATTERY_LEVEL_TYPE -> {
+                    val notification = BatteryStatus(message)
+                    if (batteryLevel != notification.level) {
+                        batteryLevel = notification.level
+                        Logger.d("Battery level update: $batteryLevel")
+                    }
+                }
+                else -> processInnerDataType(type, message)
+            }
+
+        } catch (ex: Exception) {
+            Logger.e("Data processing failed: " + ex.message)
+        }
+    }
+
+    abstract fun processInnerDataType(type: Byte, message: ByteArray)
 
     fun buildHandshakeStart(): ByteArray {
-        return ZapConstants.RIDE_ON.plus(ZapConstants.REQUEST_START).plus(localKeyProvider.getPublicKeyBytes())
+        if (ENCRYPTED)
+            return ZapConstants.RIDE_ON.plus(ZapConstants.REQUEST_START).plus(localKeyProvider.getPublicKeyBytes())
+        return ZapConstants.RIDE_ON
     }
 
     private fun processDevicePublicKeyResponse(bytes: ByteArray) {
+        // only if encryption enabled
         devicePublicKeyBytes = bytes.copyOfRange(ZapConstants.RIDE_ON.size + ZapConstants.RESPONSE_START.size, bytes.size)
         zapEncryption.initialise(devicePublicKeyBytes!!)
         if (LOG_RAW) Logger.d("Device Public Key - ${devicePublicKeyBytes!!.toHexString()}")

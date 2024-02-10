@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.IBinder
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -14,12 +15,16 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.che.common.NotificationUtils
 import com.che.common.isServiceRunning
-import com.che.zwiftplayhost.ble.ZwiftPlayBleManager
+import com.che.zap.device.ZapConstants.RC1_LEFT_SIDE
+import com.che.zap.device.ZapConstants.RC1_RIGHT_SIDE
+import com.che.zwiftplayhost.ble.ZwiftAccessoryBleManager
 import com.che.zwiftplayhost.databinding.ActivityMainBinding
 import com.che.zwiftplayhost.databinding.RecyclerItemDebugLineBinding
 import com.che.zwiftplayhost.service.BluetoothService
 import com.che.zap.utils.Logger
 import com.che.zwiftplayhost.ble.BlePermissions
+import com.che.zwiftplayhost.service.BluetoothService.Companion.BATTERY_LEVEL_UPDATE
+import com.che.zwiftplayhost.service.BluetoothService.Companion.ON_INITIALISED_UPDATE
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
@@ -36,7 +41,7 @@ class MainActivity : AppCompatActivity() {
 
     private var gattServiceConn: GattServiceConn? = null
     private var gattServiceData: BluetoothService.DataPlane? = null
-    private val bleManagerUpdateNotifications = Channel<Pair<Int, ZwiftPlayBleManager>>()
+    private val bleManagerUpdateNotifications = Channel<Pair<Int, ZwiftAccessoryBleManager>>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,15 +56,27 @@ class MainActivity : AppCompatActivity() {
             for (newValue in bleManagerUpdateNotifications) {
                 val bleManager = newValue.second
                 when (newValue.first) {
-                    1 -> {
-                        val textViewMac = if (bleManager.isLeft) binding.textLeftMac else binding.textRightMac
-                        val textViewBattery = if (bleManager.isLeft) binding.textLeftBattery else binding.textRightBattery
-                        textViewMac.text = bleManager.bluetoothDevice?.address?.substring(12)
-                        textViewBattery.text = "${bleManager.batteryLevel}%"
+                    ON_INITIALISED_UPDATE -> {
+                        if (bleManager.typeByte == RC1_LEFT_SIDE || bleManager.typeByte == RC1_RIGHT_SIDE) {
+                            val isLeft = bleManager.typeByte == RC1_LEFT_SIDE
+
+                            val textViewMac = if (isLeft) binding.textLeftMac else binding.textRightMac
+                            val textViewBattery = if (isLeft) binding.textLeftBattery else binding.textRightBattery
+                            textViewMac.text = bleManager.bluetoothDevice?.address?.substring(12)
+                            textViewBattery.text = "${bleManager.batteryLevel}%"
+                        } else {
+                            // not play controller
+                            binding.textLeftMac.visibility = View.GONE
+                            binding.textRightMac.visibility = View.GONE
+                            binding.textLeftBattery.visibility = View.GONE
+                            binding.textRightBattery.visibility = View.GONE
+                        }
                     }
-                    2 -> {
-                        val textViewBattery = if (bleManager.isLeft) binding.textLeftBattery else binding.textRightBattery
-                        textViewBattery.text = "${bleManager.batteryLevel}%"
+                    BATTERY_LEVEL_UPDATE -> {
+                        if (bleManager.typeByte == RC1_LEFT_SIDE || bleManager.typeByte == RC1_RIGHT_SIDE) {
+                            val textViewBattery = if (bleManager.typeByte == RC1_LEFT_SIDE) binding.textLeftBattery else binding.textRightBattery
+                            textViewBattery.text = "${bleManager.batteryLevel}%"
+                        }
                     }
                 }
             }

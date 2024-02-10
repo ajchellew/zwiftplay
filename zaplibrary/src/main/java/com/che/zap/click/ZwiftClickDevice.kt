@@ -1,23 +1,23 @@
-package com.che.zap.play
+package com.che.zap.click
 
 import com.che.zap.device.AbstractZapDevice
-import com.che.zap.device.ZapConstants.CONTROLLER_NOTIFICATION_MESSAGE_TYPE
-import com.che.zap.proto.ControllerNotification
+import com.che.zap.device.ZapConstants.CLICK_NOTIFICATION_MESSAGE_TYPE
+import com.che.zap.proto.ClickNotification
 import com.che.zap.utils.Logger
 import com.che.zap.utils.toHexString
 
-class ZwiftPlayDevice : AbstractZapDevice() {
+class ZwiftClickDevice : AbstractZapDevice() {
 
-    private var lastButtonState: ControllerNotification? = null
+    private var lastButtonState: ClickNotification? = null
 
     override fun processInnerDataType(type: Byte, message: ByteArray) {
         when (type) {
-            CONTROLLER_NOTIFICATION_MESSAGE_TYPE -> processButtonNotification(ControllerNotification(message))
+            CLICK_NOTIFICATION_MESSAGE_TYPE -> processButtonNotification(ClickNotification(message))
             else -> Logger.e("Unprocessed - Type: ${type.toUByte().toHexString()} Data: ${message.toHexString()}")
         }
     }
 
-    private fun processButtonNotification(notification: ControllerNotification) {
+    private fun processButtonNotification(notification: ClickNotification) {
         if (lastButtonState == null)
             Logger.d(notification.toString())
         else {

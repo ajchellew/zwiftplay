@@ -17,12 +17,13 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE
 import androidx.core.util.isEmpty
+import com.che.zap.device.ZapConstants.BC1
 import com.che.zap.device.ZapConstants.ZWIFT_MANUFACTURER_ID
 import com.che.zap.device.ZapConstants.RC1_LEFT_SIDE
 import com.che.zap.device.ZapConstants.RC1_RIGHT_SIDE
 import com.che.zwiftplayhost.R
 import com.che.zwiftplayhost.ble.BleControllerScanner
-import com.che.zwiftplayhost.ble.ZwiftPlayBleManager
+import com.che.zwiftplayhost.ble.ZwiftAccessoryBleManager
 import com.che.zap.utils.Logger
 import com.che.zwiftplayhost.utils.NotificationHelper
 import kotlinx.coroutines.CoroutineScope
@@ -37,11 +38,14 @@ class BluetoothService : Service() {
         const val NOTIFICATION_ID = 1
 
         const val DATA_PLANE_ACTION = "DataPlane"
+
+        const val ON_INITIALISED_UPDATE = 1
+        const val BATTERY_LEVEL_UPDATE = 2
     }
 
     private val defaultScope = CoroutineScope(Dispatchers.Default)
-    private var managerUpdateChannel: SendChannel<Pair<Int, ZwiftPlayBleManager>>? = null
-    private val clientManagers = mutableMapOf<String, ZwiftPlayBleManager>()
+    private var managerUpdateChannel: SendChannel<Pair<Int, ZwiftAccessoryBleManager>>? = null
+    private val clientManagers = mutableMapOf<String, ZwiftAccessoryBleManager>()
 
     private lateinit var bleScanner: BleControllerScanner
 
@@ -71,8 +75,9 @@ class BluetoothService : Service() {
                 //Logger.d(TAG, "Found BLE device ${scanResult.device.address}")
                 synchronized(clientManagers) {
                     addDeviceFromScan(scanResult)
-                    // if we find both controllers, stop scanning
-                    if (clientManagers.size == 2)
+                    // if we find both controllers, or if click stop scanning
+                    if (clientManagers.size == 2
+                        || (clientManagers.size == 1 && clientManagers.values.first().typeByte == BC1))
                         bleScanner.stop()
                 }
             }
@@ -138,7 +143,7 @@ class BluetoothService : Service() {
         }
 
     inner class DataPlane : Binder() {
-        fun setManagerUpdateChannel(sendChannel: SendChannel<Pair<Int, ZwiftPlayBleManager>>) {
+        fun setManagerUpdateChannel(sendChannel: SendChannel<Pair<Int, ZwiftAccessoryBleManager>>) {
             managerUpdateChannel = sendChannel
         }
     }
@@ -170,10 +175,14 @@ class BluetoothService : Service() {
             val data = scanResult.scanRecord?.getManufacturerSpecificData(ZWIFT_MANUFACTURER_ID) ?: return
 
             // We expect a device of BrevetDeviceType.RC1 which is 2 or 3 depending on which side it is
+            // or for a click BrevetDeviceType.BC1 which is 9
             val typeByte = data[0]
-            if (typeByte != RC1_LEFT_SIDE && typeByte != RC1_RIGHT_SIDE) return
+            if (typeByte != RC1_LEFT_SIDE && typeByte != RC1_RIGHT_SIDE && typeByte != BC1) {
+                Logger.d("Unknown device type: $typeByte")
+                return
+            }
 
-            val clientManager = ZwiftPlayBleManager(this, typeByte == RC1_LEFT_SIDE)
+            val clientManager = ZwiftAccessoryBleManager(this, typeByte)
             clientManager.registerListener(bleManagerCallback)
             clientManager.connect(device).useAutoConnect(true).enqueue()
             clientManagers[device.address] = clientManager
@@ -187,11 +196,11 @@ class BluetoothService : Service() {
         }
     }
 
-    private val bleManagerCallback = object : ZwiftPlayBleManager.Callback {
+    private val bleManagerCallback = object : ZwiftAccessoryBleManager.Callback {
         override fun initialised(address: String) {
             clientManagers[address]?.let {
                 defaultScope.launch {
-                    managerUpdateChannel?.send(Pair(1, it))
+                    managerUpdateChannel?.send(Pair(ON_INITIALISED_UPDATE, it))
                 }
             }
         }
@@ -199,7 +208,7 @@ class BluetoothService : Service() {
         override fun batteryLevelUpdate(address: String, level: Int) {
             clientManagers[address]?.let {
                 defaultScope.launch {
-                    managerUpdateChannel?.send(Pair(2, it))
+                    managerUpdateChannel?.send(Pair(BATTERY_LEVEL_UPDATE, it))
                 }
             }
         }

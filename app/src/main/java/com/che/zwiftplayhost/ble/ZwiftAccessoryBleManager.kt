@@ -5,8 +5,8 @@ import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
 import android.content.Context
-import android.util.Log
 import com.che.common.ble.BleDebugUtils.debugPrintBluetoothService
+import com.che.zap.click.ZwiftClickDevice
 import com.che.zap.device.GenericBleUuids.APPEARANCE_CHARACTERISTIC_UUID
 import com.che.zap.device.GenericBleUuids.BATTERY_LEVEL_CHARACTERISTIC_UUID
 import com.che.zap.device.GenericBleUuids.BATTERY_SERVICE_UUID
@@ -25,6 +25,10 @@ import com.che.zap.device.ZapBleUuids.ZWIFT_UNKNOWN_6_CHARACTERISTIC_UUID
 import com.che.zap.device.GenericBleUuids.SERIAL_NUMBER_STRING_CHARACTERISTIC_UUID
 import com.che.zap.device.GenericBleUuids.SERVICE_CHANGED_CHARACTERISTIC_UUID
 import com.che.zap.device.AbstractZapDevice
+import com.che.zap.device.ZapConstants.BC1
+import com.che.zap.device.ZapConstants.RC1_LEFT_SIDE
+import com.che.zap.device.ZapConstants.RC1_RIGHT_SIDE
+import com.che.zap.device.ZapConstants.typeByteToDeviceName
 import com.che.zap.play.ZwiftPlayDevice
 import com.che.zap.utils.Logger
 import com.che.zap.utils.toHexString
@@ -33,7 +37,7 @@ import no.nordicsemi.android.ble.data.Data
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 
-class ZwiftPlayBleManager(context: Context, val isLeft: Boolean) : BleManager(context) {
+class ZwiftAccessoryBleManager(context: Context, val typeByte: Byte) : BleManager(context) {
 
     private lateinit var zapDevice: AbstractZapDevice
 
@@ -135,9 +139,13 @@ class ZwiftPlayBleManager(context: Context, val isLeft: Boolean) : BleManager(co
 
     override fun initialize() {
 
-        Logger.d("Initialize ${if (isLeft) "Left" else "Right"} Controller")
+        Logger.d("Initialize ${typeByteToDeviceName(typeByte)}")
 
-        zapDevice = ZwiftPlayDevice()
+        zapDevice = when (typeByte) {
+            RC1_LEFT_SIDE, RC1_RIGHT_SIDE -> ZwiftPlayDevice()
+            BC1 -> ZwiftClickDevice()
+            else -> throw Exception("Unknown device type")
+        }
 
         setIndicationCallback(serviceChangedCharacteristic).with { _, data ->
             getHexStringValue(data)?.let {

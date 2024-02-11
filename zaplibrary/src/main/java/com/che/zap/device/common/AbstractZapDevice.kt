@@ -43,6 +43,7 @@ abstract class AbstractZapDevice {
             bytes.startsWith(ZapConstants.RIDE_ON.plus(ZapConstants.RESPONSE_START)) -> processDevicePublicKeyResponse(bytes)
             bytes.startsWith(ZapConstants.RIDE_ON) -> Logger.d("Empty RideOn response - unencrypted mode")
             !ENCRYPTED || !supportsEncryption() || (bytes.size > Int.SIZE_BYTES + EncryptionUtils.MAC_LENGTH) -> processData(bytes)
+            bytes[0] == ZapConstants.DISCONNECT_MESSAGE_TYPE -> Logger.d("Disconnect message")
             else -> Logger.e("Unprocessed - Data Type: ${bytes.toHexString()}")
         }
     }

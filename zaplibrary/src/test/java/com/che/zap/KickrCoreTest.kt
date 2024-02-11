@@ -51,6 +51,8 @@ class KickrCoreTest {
     @Test
     fun captureData() {
 
+        // was manually processing capture, then did the csv below this test
+
         // 03 is the status sent constantly
         // 04 to kickr changing gear
         // 00 to kickr why?
@@ -116,6 +118,91 @@ class KickrCoreTest {
             val result = "" + cap[0] + ": " +  protoToString(sub)
             println(result)
         }
+    }
+
+    private val regex = Regex("[^A-Za-z0-9 ]") // theres some nonsense in the csv
+
+    private val csvSplitRegex = Regex(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)")
+
+    @Test
+    fun captureCsvData() {
+
+        // bt data capture running with play controllers and core. virtual shifting enabled
+        // - started at gear 12.
+        // - slowly spun up and down then
+        // - worked down the gears to min 1
+        // - worked up the gears to max 22 (?)
+        // - returned to 11? or 12
+
+        val raw = false // toggle between raw and protobuf read
+        val outputLineNo = false
+        val outputSource = false
+
+        val csvStream = this.javaClass.classLoader?.getResourceAsStream("zwift-play-kickr-core.csv")
+        if (csvStream != null) {
+            val reader = csvStream.bufferedReader()
+            reader.readLine() // header
+            reader.forEachLine {
+
+                val tokens = it.split(csvSplitRegex)
+
+                val lineNo = tokens[0].toInt()
+
+                var source = "In \t"
+                if (tokens[1].contains("Phone"))
+                    source = "Out\t"
+
+                val sanitised = regex.replace(tokens[7], "") // works
+                val data = sanitised.toHexByteArray()
+
+                val outputData = if (raw) {
+                    sanitised
+                } else {
+                    val sub = data.copyOfRange(1, data.size)
+                    protoToString(sub)
+                }
+
+                val typeString = guessedType(data[0])
+
+
+                // filters
+
+                // trainer notifications only
+                /*if (data[0] != 3.toByte())
+                    return@forEachLine*/
+
+                // no trainer notifications
+                /*if (data[0] == 3.toByte())
+                    return@forEachLine*/
+
+                // ignoring the play data from the capture, only left it in for an idea when buttons were pressed
+                if (tokens[1].contains("Play") || tokens[2].contains("Play"))
+                    return@forEachLine
+
+
+                var result = ""
+                if (outputLineNo) result += "#$lineNo:  "
+                if (outputSource) result += "$source "
+                result += "$typeString $outputData"
+
+                println(result)
+            }
+        }
+    }
+
+
+    //GearChangeCommand  : {  5: {  2: 30300 } }    - this doesn't look like its a protobuf
+    //0                  : {  1: 520 } - this does
+    //GearChangeResponse : {  1: 520 2: {  1: {  8: 30300 } } } - this does but maybe the inner isn't?
+
+    // guess!
+    private fun guessedType(type: Byte): String {
+        return when (type) {
+            3.toByte() ->  "TrainerNotification"
+            4.toByte() ->  "GearChangeCommand  "
+            60.toByte() -> "GearChangeResponse "
+            else -> "$type                  "
+        } + ":"
     }
 
     private fun protoToString(data: ByteArray): String {

@@ -24,4 +24,7 @@ object ZapConstants {
 
     // not figured out the protobuf type this really is, the content is just two varints.
     const val CLICK_NOTIFICATION_MESSAGE_TYPE = 55.toByte()
+
+    // see this if connected to Core then Zwift connects to it. just one byte
+    const val DISCONNECT_MESSAGE_TYPE = 0xFE.toByte()
 }

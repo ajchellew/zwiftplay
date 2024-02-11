@@ -1,11 +1,11 @@
-package com.che.zap
+package com.che.zap.device
 
-import com.che.zap.device.AbstractZapDevice
+import com.che.zap.device.common.AbstractZapDevice
 import com.che.zap.utils.Logger
 import com.che.zap.utils.ProtoDecode
 import com.che.zap.utils.toHexString
 
-class KickrCoreDevice : AbstractZapDevice() {
+class KickrCore : AbstractZapDevice() {
 
     companion object {
 

@@ -9,7 +9,7 @@ import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.os.ParcelUuid
-import com.che.zap.device.ZapBleUuids
+import com.che.zap.device.common.ZapBleUuids
 import com.che.zap.utils.BaseObservable
 import com.che.zap.utils.Logger
 
@@ -33,7 +33,7 @@ class BleControllerScanner(context: Context) : BaseObservable<BleControllerScann
     @SuppressLint("MissingPermission") // permission handled by UI
     fun start() {
 
-        // only scan for the service unique to the controllers
+        // only scan for the service unique to zwift. both in controllers and now kickr
 
         val zwiftAccessoryFilter = ScanFilter.Builder()
             .setServiceUuid(ParcelUuid(ZapBleUuids.ZWIFT_CUSTOM_SERVICE_UUID))

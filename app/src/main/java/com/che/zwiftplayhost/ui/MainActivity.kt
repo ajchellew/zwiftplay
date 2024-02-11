@@ -15,8 +15,9 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.che.common.NotificationUtils
 import com.che.common.isServiceRunning
-import com.che.zap.device.ZapConstants.RC1_LEFT_SIDE
-import com.che.zap.device.ZapConstants.RC1_RIGHT_SIDE
+import com.che.zap.device.DeviceType
+import com.che.zap.device.common.ZapConstants.RC1_LEFT_SIDE
+import com.che.zap.device.common.ZapConstants.RC1_RIGHT_SIDE
 import com.che.zwiftplayhost.ble.ZwiftAccessoryBleManager
 import com.che.zwiftplayhost.databinding.ActivityMainBinding
 import com.che.zwiftplayhost.databinding.RecyclerItemDebugLineBinding
@@ -57,8 +58,8 @@ class MainActivity : AppCompatActivity() {
                 val bleManager = newValue.second
                 when (newValue.first) {
                     ON_INITIALISED_UPDATE -> {
-                        if (bleManager.typeByte == RC1_LEFT_SIDE || bleManager.typeByte == RC1_RIGHT_SIDE) {
-                            val isLeft = bleManager.typeByte == RC1_LEFT_SIDE
+                        if (bleManager.type.isPlayController()) {
+                            val isLeft = bleManager.type == DeviceType.ZWIFT_PLAY_LEFT
 
                             val textViewMac = if (isLeft) binding.textLeftMac else binding.textRightMac
                             val textViewBattery = if (isLeft) binding.textLeftBattery else binding.textRightBattery
@@ -70,8 +71,8 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                     BATTERY_LEVEL_UPDATE -> {
-                        if (bleManager.typeByte == RC1_LEFT_SIDE || bleManager.typeByte == RC1_RIGHT_SIDE) {
-                            val textViewBattery = if (bleManager.typeByte == RC1_LEFT_SIDE) binding.textLeftBattery else binding.textRightBattery
+                        if (bleManager.type.isPlayController()) {
+                            val textViewBattery = if (bleManager.type == DeviceType.ZWIFT_PLAY_LEFT) binding.textLeftBattery else binding.textRightBattery
                             textViewBattery.text = "${bleManager.batteryLevel}%"
                         }
                     }

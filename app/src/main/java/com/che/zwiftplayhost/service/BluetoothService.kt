@@ -18,12 +18,12 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE
 import androidx.core.util.isEmpty
-import com.che.zap.KickrCoreDevice
-import com.che.zap.device.ZapConstants.BC1
-import com.che.zap.device.ZapConstants.KICKR
-import com.che.zap.device.ZapConstants.ZWIFT_MANUFACTURER_ID
-import com.che.zap.device.ZapConstants.RC1_LEFT_SIDE
-import com.che.zap.device.ZapConstants.RC1_RIGHT_SIDE
+import com.che.zap.device.DeviceType
+import com.che.zap.device.KickrCore
+import com.che.zap.device.common.ZapConstants.BC1
+import com.che.zap.device.common.ZapConstants.ZWIFT_MANUFACTURER_ID
+import com.che.zap.device.common.ZapConstants.RC1_LEFT_SIDE
+import com.che.zap.device.common.ZapConstants.RC1_RIGHT_SIDE
 import com.che.zwiftplayhost.R
 import com.che.zwiftplayhost.ble.BleControllerScanner
 import com.che.zwiftplayhost.ble.ZwiftAccessoryBleManager
@@ -80,7 +80,7 @@ class BluetoothService : Service() {
                     addDeviceFromScan(scanResult)
                     // if we find both controllers, or if click stop scanning
                     if (clientManagers.size == 2
-                        || (clientManagers.size == 1 && clientManagers.values.first().typeByte == BC1))
+                        || (clientManagers.size == 1 && clientManagers.values.first().type == DeviceType.ZWIFT_CLICK))
                         bleScanner.stop()
                 }
             }
@@ -190,7 +190,7 @@ class BluetoothService : Service() {
                     return
                 }
 
-                val clientManager = ZwiftAccessoryBleManager(this, typeByte)
+                val clientManager = ZwiftAccessoryBleManager(this, DeviceType.fromZwiftManufacturerData(typeByte))
                 clientManager.registerListener(bleManagerCallback)
                 clientManager.connect(device).useAutoConnect(true).enqueue()
                 clientManagers[device.address] = clientManager
@@ -203,9 +203,9 @@ class BluetoothService : Service() {
 
         if (scanRecord.deviceName == null) return
 
-        if (!scanRecord.deviceName!!.startsWith(KickrCoreDevice.BLUETOOTH_PREFIX)) return
+        if (!scanRecord.deviceName!!.startsWith(KickrCore.BLUETOOTH_PREFIX)) return
 
-        val clientManager = ZwiftAccessoryBleManager(this, KICKR)
+        val clientManager = ZwiftAccessoryBleManager(this, DeviceType.WAHOO_KICKR_CORE)
         clientManager.registerListener(bleManagerCallback)
         clientManager.connect(device).useAutoConnect(true).enqueue()
         clientManagers[device.address] = clientManager

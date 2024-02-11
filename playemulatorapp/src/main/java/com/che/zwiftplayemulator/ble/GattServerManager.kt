@@ -11,13 +11,11 @@ import android.bluetooth.BluetoothGattService
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.content.Context
-import com.che.zap.device.GenericBleUuids
-import com.che.zap.device.GenericBleUuids.BATTERY_LEVEL_CHARACTERISTIC_UUID
-import com.che.zap.device.GenericBleUuids.BATTERY_SERVICE_UUID
-import com.che.zap.device.GenericBleUuids.DEFAULT_DESCRIPTOR_UUID
-import com.che.zap.device.GenericBleUuids.DEVICE_NAME_CHARACTERISTIC_UUID
-import com.che.zap.device.GenericBleUuids.GENERIC_ACCESS_SERVICE_UUID
-import com.che.zap.device.GenericBleUuids.GENERIC_ATTRIBUTE_SERVICE_UUID
+import com.che.zap.device.common.GenericBleUuids.BATTERY_LEVEL_CHARACTERISTIC_UUID
+import com.che.zap.device.common.GenericBleUuids.BATTERY_SERVICE_UUID
+import com.che.zap.device.common.GenericBleUuids.DEFAULT_DESCRIPTOR_UUID
+import com.che.zap.device.common.GenericBleUuids.DEVICE_NAME_CHARACTERISTIC_UUID
+import com.che.zap.device.common.GenericBleUuids.GENERIC_ACCESS_SERVICE_UUID
 import com.che.zap.utils.Logger
 import com.che.zwiftplayemulator.ble.gattservices.BatteryService
 import com.che.zwiftplayemulator.ble.gattservices.DeviceInformationService
@@ -28,7 +26,6 @@ import no.nordicsemi.android.ble.BleManager
 import no.nordicsemi.android.ble.BleServerManager
 import no.nordicsemi.android.ble.observer.ServerObserver
 import java.nio.charset.StandardCharsets
-import java.util.Collections
 
 private class ControllerServerManager(val context: Context) : BleServerManager(context), ServerObserver {
 

@@ -3,10 +3,9 @@ package com.che.zwiftplayemulator.ble.gattservices
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothGattService
-import com.che.zap.device.GenericBleUuids.BATTERY_LEVEL_CHARACTERISTIC_UUID
-import com.che.zap.device.GenericBleUuids.BATTERY_SERVICE_UUID
-import com.che.zap.device.GenericBleUuids.DEFAULT_DESCRIPTOR_UUID
-import com.che.zap.utils.BleUuids
+import com.che.zap.device.common.GenericBleUuids.BATTERY_LEVEL_CHARACTERISTIC_UUID
+import com.che.zap.device.common.GenericBleUuids.BATTERY_SERVICE_UUID
+import com.che.zap.device.common.GenericBleUuids.DEFAULT_DESCRIPTOR_UUID
 
 class BatteryService : BluetoothGattService(BATTERY_SERVICE_UUID, SERVICE_TYPE_PRIMARY) {
 

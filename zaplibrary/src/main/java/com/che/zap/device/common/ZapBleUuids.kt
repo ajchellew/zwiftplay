@@ -1,4 +1,4 @@
-package com.che.zap.device
+package com.che.zap.device.common
 
 import com.che.zap.utils.BleUuids
 import com.che.zap.utils.BleUuids.uuidFromShortString

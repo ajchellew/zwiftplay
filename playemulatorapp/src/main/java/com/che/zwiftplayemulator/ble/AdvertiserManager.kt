@@ -6,8 +6,8 @@ import android.bluetooth.le.AdvertiseData
 import android.bluetooth.le.AdvertiseSettings
 import android.bluetooth.le.BluetoothLeAdvertiser
 import android.os.ParcelUuid
-import com.che.zap.device.ZapBleUuids
-import com.che.zap.device.ZapConstants
+import com.che.zap.device.common.ZapBleUuids
+import com.che.zap.device.common.ZapConstants
 import com.che.zap.utils.Logger
 import java.nio.ByteBuffer
 

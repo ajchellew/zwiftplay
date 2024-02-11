@@ -1,10 +1,10 @@
-package com.che.zap.device
+package com.che.zap.device.common
 
 import com.che.zap.crypto.EncryptionUtils
 import com.che.zap.crypto.LocalKeyProvider
 import com.che.zap.crypto.ZapCrypto
-import com.che.zap.device.ZapConstants.BATTERY_LEVEL_TYPE
-import com.che.zap.device.ZapConstants.EMPTY_MESSAGE_TYPE
+import com.che.zap.device.common.ZapConstants.BATTERY_LEVEL_TYPE
+import com.che.zap.device.common.ZapConstants.EMPTY_MESSAGE_TYPE
 import com.che.zap.proto.BatteryStatus
 import com.che.zap.utils.Logger
 import com.che.zap.utils.startsWith

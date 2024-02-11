@@ -3,13 +3,12 @@ package com.che.zwiftplayemulator.ble.gattservices
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothGattService
-import com.che.zap.device.GenericBleUuids
-import com.che.zap.device.GenericBleUuids.DEFAULT_DESCRIPTOR_UUID
-import com.che.zap.device.ZapBleUuids.ZWIFT_ASYNC_CHARACTERISTIC_UUID
-import com.che.zap.device.ZapBleUuids.ZWIFT_CUSTOM_SERVICE_UUID
-import com.che.zap.device.ZapBleUuids.ZWIFT_SYNC_RX_CHARACTERISTIC_UUID
-import com.che.zap.device.ZapBleUuids.ZWIFT_SYNC_TX_CHARACTERISTIC_UUID
-import com.che.zap.device.ZapBleUuids.ZWIFT_UNKNOWN_6_CHARACTERISTIC_UUID
+import com.che.zap.device.common.GenericBleUuids.DEFAULT_DESCRIPTOR_UUID
+import com.che.zap.device.common.ZapBleUuids.ZWIFT_ASYNC_CHARACTERISTIC_UUID
+import com.che.zap.device.common.ZapBleUuids.ZWIFT_CUSTOM_SERVICE_UUID
+import com.che.zap.device.common.ZapBleUuids.ZWIFT_SYNC_RX_CHARACTERISTIC_UUID
+import com.che.zap.device.common.ZapBleUuids.ZWIFT_SYNC_TX_CHARACTERISTIC_UUID
+import com.che.zap.device.common.ZapBleUuids.ZWIFT_UNKNOWN_6_CHARACTERISTIC_UUID
 
 class ZapService : BluetoothGattService(ZWIFT_CUSTOM_SERVICE_UUID, SERVICE_TYPE_PRIMARY) {
 

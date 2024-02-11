@@ -5,33 +5,28 @@ import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
 import android.content.Context
-import com.che.common.ble.BleDebugUtils.debugPrintBluetoothService
-import com.che.zap.KickrCoreDevice
-import com.che.zap.ZwiftClickDevice
-import com.che.zap.device.GenericBleUuids.APPEARANCE_CHARACTERISTIC_UUID
-import com.che.zap.device.GenericBleUuids.BATTERY_LEVEL_CHARACTERISTIC_UUID
-import com.che.zap.device.GenericBleUuids.BATTERY_SERVICE_UUID
-import com.che.zap.device.GenericBleUuids.DEVICE_INFORMATION_SERVICE_UUID
-import com.che.zap.device.GenericBleUuids.DEVICE_NAME_CHARACTERISTIC_UUID
-import com.che.zap.device.GenericBleUuids.FIRMWARE_REVISION_STRING_CHARACTERISTIC_UUID
-import com.che.zap.device.GenericBleUuids.GENERIC_ACCESS_SERVICE_UUID
-import com.che.zap.device.GenericBleUuids.GENERIC_ATTRIBUTE_SERVICE_UUID
-import com.che.zap.device.GenericBleUuids.HARDWARE_REVISION_STRING_CHARACTERISTIC_UUID
-import com.che.zap.device.GenericBleUuids.MANUFACTURER_NAME_STRING_CHARACTERISTIC_UUID
-import com.che.zap.device.ZapBleUuids.ZWIFT_CUSTOM_SERVICE_UUID
-import com.che.zap.device.ZapBleUuids.ZWIFT_ASYNC_CHARACTERISTIC_UUID
-import com.che.zap.device.ZapBleUuids.ZWIFT_SYNC_RX_CHARACTERISTIC_UUID
-import com.che.zap.device.ZapBleUuids.ZWIFT_SYNC_TX_CHARACTERISTIC_UUID
-import com.che.zap.device.ZapBleUuids.ZWIFT_UNKNOWN_6_CHARACTERISTIC_UUID
-import com.che.zap.device.GenericBleUuids.SERIAL_NUMBER_STRING_CHARACTERISTIC_UUID
-import com.che.zap.device.GenericBleUuids.SERVICE_CHANGED_CHARACTERISTIC_UUID
-import com.che.zap.device.AbstractZapDevice
-import com.che.zap.device.ZapConstants.BC1
-import com.che.zap.device.ZapConstants.KICKR
-import com.che.zap.device.ZapConstants.RC1_LEFT_SIDE
-import com.che.zap.device.ZapConstants.RC1_RIGHT_SIDE
-import com.che.zap.device.ZapConstants.typeByteToDeviceName
-import com.che.zap.ZwiftPlayDevice
+import com.che.zap.device.DeviceType
+import com.che.zap.device.KickrCore
+import com.che.zap.device.ZwiftClick
+import com.che.zap.device.common.GenericBleUuids.APPEARANCE_CHARACTERISTIC_UUID
+import com.che.zap.device.common.GenericBleUuids.BATTERY_LEVEL_CHARACTERISTIC_UUID
+import com.che.zap.device.common.GenericBleUuids.BATTERY_SERVICE_UUID
+import com.che.zap.device.common.GenericBleUuids.DEVICE_INFORMATION_SERVICE_UUID
+import com.che.zap.device.common.GenericBleUuids.DEVICE_NAME_CHARACTERISTIC_UUID
+import com.che.zap.device.common.GenericBleUuids.FIRMWARE_REVISION_STRING_CHARACTERISTIC_UUID
+import com.che.zap.device.common.GenericBleUuids.GENERIC_ACCESS_SERVICE_UUID
+import com.che.zap.device.common.GenericBleUuids.GENERIC_ATTRIBUTE_SERVICE_UUID
+import com.che.zap.device.common.GenericBleUuids.HARDWARE_REVISION_STRING_CHARACTERISTIC_UUID
+import com.che.zap.device.common.GenericBleUuids.MANUFACTURER_NAME_STRING_CHARACTERISTIC_UUID
+import com.che.zap.device.common.ZapBleUuids.ZWIFT_CUSTOM_SERVICE_UUID
+import com.che.zap.device.common.ZapBleUuids.ZWIFT_ASYNC_CHARACTERISTIC_UUID
+import com.che.zap.device.common.ZapBleUuids.ZWIFT_SYNC_RX_CHARACTERISTIC_UUID
+import com.che.zap.device.common.ZapBleUuids.ZWIFT_SYNC_TX_CHARACTERISTIC_UUID
+import com.che.zap.device.common.ZapBleUuids.ZWIFT_UNKNOWN_6_CHARACTERISTIC_UUID
+import com.che.zap.device.common.GenericBleUuids.SERIAL_NUMBER_STRING_CHARACTERISTIC_UUID
+import com.che.zap.device.common.GenericBleUuids.SERVICE_CHANGED_CHARACTERISTIC_UUID
+import com.che.zap.device.common.AbstractZapDevice
+import com.che.zap.device.ZwiftPlay
 import com.che.zap.utils.Logger
 import com.che.zap.utils.toHexString
 import no.nordicsemi.android.ble.BleManager
@@ -39,7 +34,7 @@ import no.nordicsemi.android.ble.data.Data
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 
-class ZwiftAccessoryBleManager(context: Context, val typeByte: Byte) : BleManager(context) {
+class ZwiftAccessoryBleManager(context: Context, val type: DeviceType) : BleManager(context) {
 
     private lateinit var zapDevice: AbstractZapDevice
 
@@ -129,9 +124,9 @@ class ZwiftAccessoryBleManager(context: Context, val typeByte: Byte) : BleManage
 
         val asyncValid = asyncCharacteristic != null && (asyncCharacteristic!!.properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY != 0)
         val syncTxValid = syncTxCharacteristic != null && (syncTxCharacteristic!!.properties and BluetoothGattCharacteristic.PROPERTY_INDICATE != 0)
-        val unknown6Valid = unknown6Characteristic != null && (unknown6Characteristic!!.properties and BluetoothGattCharacteristic.PROPERTY_INDICATE != 0)  || typeByte == KICKR
+        val unknown6Valid = unknown6Characteristic != null && (unknown6Characteristic!!.properties and BluetoothGattCharacteristic.PROPERTY_INDICATE != 0)  || type == DeviceType.WAHOO_KICKR_CORE
 
-        val batteryValid = batteryCharacteristic != null && (batteryCharacteristic!!.properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY != 0) || typeByte == KICKR
+        val batteryValid = batteryCharacteristic != null && (batteryCharacteristic!!.properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY != 0) || type == DeviceType.WAHOO_KICKR_CORE
 
         return deviceNameCharacteristic != null && appearanceCharacteristic != null && serviceChangedValid
                 && manufacturerCharacteristic != null && serialCharacteristic != null
@@ -141,12 +136,12 @@ class ZwiftAccessoryBleManager(context: Context, val typeByte: Byte) : BleManage
 
     override fun initialize() {
 
-        Logger.d("Initialize ${typeByteToDeviceName(typeByte)}")
+        Logger.d("Initialize ${type.description}")
 
-        zapDevice = when (typeByte) {
-            RC1_LEFT_SIDE, RC1_RIGHT_SIDE -> ZwiftPlayDevice()
-            BC1 -> ZwiftClickDevice()
-            KICKR -> KickrCoreDevice()
+        zapDevice = when (type) {
+            DeviceType.ZWIFT_PLAY_LEFT, DeviceType.ZWIFT_PLAY_RIGHT -> ZwiftPlay()
+            DeviceType.ZWIFT_CLICK -> ZwiftClick()
+            DeviceType.WAHOO_KICKR_CORE -> KickrCore()
             else -> throw Exception("Unknown device type")
         }
 

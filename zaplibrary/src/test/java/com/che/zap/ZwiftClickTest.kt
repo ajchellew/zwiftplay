@@ -1,4 +1,4 @@
-package com.che.zap.click
+package com.che.zap
 
 import com.che.zap.proto.ClickNotification
 import org.junit.Test
@@ -37,3 +37,4 @@ class ZwiftClickTest {
     }
 
 }
+

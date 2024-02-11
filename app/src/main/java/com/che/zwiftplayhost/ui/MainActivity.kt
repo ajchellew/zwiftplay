@@ -66,10 +66,7 @@ class MainActivity : AppCompatActivity() {
                             textViewBattery.text = "${bleManager.batteryLevel}%"
                         } else {
                             // not play controller
-                            binding.textLeftMac.visibility = View.GONE
-                            binding.textRightMac.visibility = View.GONE
-                            binding.textLeftBattery.visibility = View.GONE
-                            binding.textRightBattery.visibility = View.GONE
+                            binding.zwiftPlayDetailsLayout.visibility = View.GONE
                         }
                     }
                     BATTERY_LEVEL_UPDATE -> {

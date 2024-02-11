@@ -34,10 +34,14 @@ class BleControllerScanner(context: Context) : BaseObservable<BleControllerScann
     fun start() {
 
         // only scan for the service unique to the controllers
-        val filter = ScanFilter.Builder()
+
+        val zwiftAccessoryFilter = ScanFilter.Builder()
             .setServiceUuid(ParcelUuid(ZapBleUuids.ZWIFT_CUSTOM_SERVICE_UUID))
             .build()
-        val filters = listOf<ScanFilter>(filter)
+        val kickrCoreFilter = ScanFilter.Builder()
+            .setServiceData(ParcelUuid(ZapBleUuids.ZWIFT_CUSTOM_SERVICE_UUID), byteArrayOf(1))
+            .build()
+        val filters = listOf<ScanFilter>(zwiftAccessoryFilter, kickrCoreFilter)
 
         val settings = ScanSettings.Builder().build()
 

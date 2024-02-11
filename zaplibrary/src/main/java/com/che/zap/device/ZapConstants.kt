@@ -11,6 +11,10 @@ object ZapConstants {
     // Zwift Click = BC1
     const val BC1: Byte = 9
 
+    // Kickr Core - this is just a byte I've chosen, i.e. no manufacturer data specifies this.
+    // todo make enum with hardware types used by library
+    const val KICKR: Byte = 127
+
     val RIDE_ON = byteArrayOf(82, 105, 100, 101, 79, 110)
 
     // these don't actually seem to matter, its just the header has to be 7 bytes RIDEON + 2
@@ -30,6 +34,7 @@ object ZapConstants {
             RC1_RIGHT_SIDE -> "Right Play Controller"
             RC1_LEFT_SIDE -> "Left Play Controller"
             BC1 -> "Click"
+            KICKR -> "Kickr Core"
             else -> "Unknown"
         }
     }

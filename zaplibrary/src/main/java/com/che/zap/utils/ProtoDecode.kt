@@ -16,8 +16,12 @@ object ProtoDecode {
     // https://stackoverflow.com/a/68088642 very useful also
 
     @Throws(IOException::class)
-    fun decodeProto(data: ByteArray?, singleLine: Boolean): String {
-        return decodeProto(ByteString.copyFrom(data), 0, singleLine)
+    fun decodeProto(data: ByteArray, singleLine: Boolean = true): String {
+        return try {
+            decodeProto(ByteString.copyFrom(data), 0, singleLine)
+        } catch (ex: Exception) {
+            "Proto Failed - ${data.toHexString()}"
+        }
     }
 
     @Throws(IOException::class)

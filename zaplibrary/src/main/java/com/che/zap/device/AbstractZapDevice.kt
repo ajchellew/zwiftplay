@@ -18,13 +18,17 @@ abstract class AbstractZapDevice {
 
         // As cagnulein found out you can bypass all the crypto and just get the protocol buffer data.
         // useful if you are using the Zwift hardware for something else.
-        internal const val ENCRYPTED = false
+        internal const val ENCRYPTED = true
     }
 
     // only if encrypted = true
     private var devicePublicKeyBytes: ByteArray? = null
     private var localKeyProvider = LocalKeyProvider()
     private var zapEncryption = ZapCrypto(localKeyProvider)
+
+    open fun supportsEncryption(): Boolean {
+        return true
+    }
 
     // you get battery level in a BLE characteristic and via a ZAP message.
     // technically all zap devices might not have batteries. but this is just a test app
@@ -37,8 +41,8 @@ abstract class AbstractZapDevice {
 
         when {
             bytes.startsWith(ZapConstants.RIDE_ON.plus(ZapConstants.RESPONSE_START)) -> processDevicePublicKeyResponse(bytes)
-            bytes.contentEquals(ZapConstants.RIDE_ON) -> Logger.e("Empty RideOn response - unencrypted mode")
-            !ENCRYPTED || (bytes.size > Int.SIZE_BYTES + EncryptionUtils.MAC_LENGTH) -> processData(bytes)
+            bytes.startsWith(ZapConstants.RIDE_ON) -> Logger.d("Empty RideOn response - unencrypted mode")
+            !ENCRYPTED || !supportsEncryption() || (bytes.size > Int.SIZE_BYTES + EncryptionUtils.MAC_LENGTH) -> processData(bytes)
             else -> Logger.e("Unprocessed - Data Type: ${bytes.toHexString()}")
         }
     }
@@ -51,7 +55,7 @@ abstract class AbstractZapDevice {
             val type: Byte
             val message: ByteArray
 
-            if (ENCRYPTED) {
+            if (supportsEncryption() && ENCRYPTED) {
                 val counter = bytes.copyOfRange(0, Int.SIZE_BYTES)
                 val payload = bytes.copyOfRange(Int.SIZE_BYTES, bytes.size)
 
@@ -83,7 +87,7 @@ abstract class AbstractZapDevice {
     abstract fun processInnerDataType(type: Byte, message: ByteArray)
 
     fun buildHandshakeStart(): ByteArray {
-        if (ENCRYPTED)
+        if (supportsEncryption() && ENCRYPTED)
             return ZapConstants.RIDE_ON.plus(ZapConstants.REQUEST_START).plus(localKeyProvider.getPublicKeyBytes())
         return ZapConstants.RIDE_ON
     }

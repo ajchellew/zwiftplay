@@ -5,6 +5,7 @@ import android.app.Service
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
+import android.bluetooth.le.ScanRecord
 import android.bluetooth.le.ScanResult
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -17,7 +18,9 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE
 import androidx.core.util.isEmpty
+import com.che.zap.KickrCoreDevice
 import com.che.zap.device.ZapConstants.BC1
+import com.che.zap.device.ZapConstants.KICKR
 import com.che.zap.device.ZapConstants.ZWIFT_MANUFACTURER_ID
 import com.che.zap.device.ZapConstants.RC1_LEFT_SIDE
 import com.che.zap.device.ZapConstants.RC1_RIGHT_SIDE
@@ -168,25 +171,44 @@ class BluetoothService : Service() {
         if (!clientManagers.containsKey(device.address)) {
             Logger.d("Connecting ${device.address}")
 
-            val manData = scanResult.scanRecord!!.manufacturerSpecificData
-            if (manData == null || manData.isEmpty()) return
+            scanResult.scanRecord?.let { scanRecord ->
 
-            // 2378 is the value in the manufacturer data
-            val data = scanResult.scanRecord?.getManufacturerSpecificData(ZWIFT_MANUFACTURER_ID) ?: return
+                val manData = scanRecord.manufacturerSpecificData
+                if (manData == null || manData.isEmpty()) {
+                    connectToNonZwiftAccessory(device, scanRecord)
+                    return
+                }
 
-            // We expect a device of BrevetDeviceType.RC1 which is 2 or 3 depending on which side it is
-            // or for a click BrevetDeviceType.BC1 which is 9
-            val typeByte = data[0]
-            if (typeByte != RC1_LEFT_SIDE && typeByte != RC1_RIGHT_SIDE && typeByte != BC1) {
-                Logger.d("Unknown device type: $typeByte")
-                return
+                // 2378 is the value in the manufacturer data
+                val data = scanRecord.getManufacturerSpecificData(ZWIFT_MANUFACTURER_ID) ?: return
+
+                // We expect a device of BrevetDeviceType.RC1 which is 2 or 3 depending on which side it is
+                // or for a click BrevetDeviceType.BC1 which is 9
+                val typeByte = data[0]
+                if (typeByte != RC1_LEFT_SIDE && typeByte != RC1_RIGHT_SIDE && typeByte != BC1) {
+                    Logger.d("Unknown device type: $typeByte")
+                    return
+                }
+
+                val clientManager = ZwiftAccessoryBleManager(this, typeByte)
+                clientManager.registerListener(bleManagerCallback)
+                clientManager.connect(device).useAutoConnect(true).enqueue()
+                clientManagers[device.address] = clientManager
+
             }
-
-            val clientManager = ZwiftAccessoryBleManager(this, typeByte)
-            clientManager.registerListener(bleManagerCallback)
-            clientManager.connect(device).useAutoConnect(true).enqueue()
-            clientManagers[device.address] = clientManager
         }
+    }
+
+    private fun connectToNonZwiftAccessory(device: BluetoothDevice, scanRecord: ScanRecord) {
+
+        if (scanRecord.deviceName == null) return
+
+        if (!scanRecord.deviceName!!.startsWith(KickrCoreDevice.BLUETOOTH_PREFIX)) return
+
+        val clientManager = ZwiftAccessoryBleManager(this, KICKR)
+        clientManager.registerListener(bleManagerCallback)
+        clientManager.connect(device).useAutoConnect(true).enqueue()
+        clientManagers[device.address] = clientManager
     }
 
     private fun removeDevice(device: BluetoothDevice) {

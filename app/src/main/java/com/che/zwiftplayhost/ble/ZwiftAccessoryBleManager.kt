@@ -6,7 +6,8 @@ import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
 import android.content.Context
 import com.che.common.ble.BleDebugUtils.debugPrintBluetoothService
-import com.che.zap.click.ZwiftClickDevice
+import com.che.zap.KickrCoreDevice
+import com.che.zap.ZwiftClickDevice
 import com.che.zap.device.GenericBleUuids.APPEARANCE_CHARACTERISTIC_UUID
 import com.che.zap.device.GenericBleUuids.BATTERY_LEVEL_CHARACTERISTIC_UUID
 import com.che.zap.device.GenericBleUuids.BATTERY_SERVICE_UUID
@@ -26,10 +27,11 @@ import com.che.zap.device.GenericBleUuids.SERIAL_NUMBER_STRING_CHARACTERISTIC_UU
 import com.che.zap.device.GenericBleUuids.SERVICE_CHANGED_CHARACTERISTIC_UUID
 import com.che.zap.device.AbstractZapDevice
 import com.che.zap.device.ZapConstants.BC1
+import com.che.zap.device.ZapConstants.KICKR
 import com.che.zap.device.ZapConstants.RC1_LEFT_SIDE
 import com.che.zap.device.ZapConstants.RC1_RIGHT_SIDE
 import com.che.zap.device.ZapConstants.typeByteToDeviceName
-import com.che.zap.play.ZwiftPlayDevice
+import com.che.zap.ZwiftPlayDevice
 import com.che.zap.utils.Logger
 import com.che.zap.utils.toHexString
 import no.nordicsemi.android.ble.BleManager
@@ -95,7 +97,7 @@ class ZwiftAccessoryBleManager(context: Context, val typeByte: Byte) : BleManage
 
         val genericAttributeService = gatt.getService(GENERIC_ATTRIBUTE_SERVICE_UUID)
         if (genericAttributeService != null) {
-            debugPrintBluetoothService("GenericAttributeService", genericAttributeService)
+            //debugPrintBluetoothService("GenericAttributeService", genericAttributeService)
             serviceChangedCharacteristic = genericAttributeService.getCharacteristic(SERVICE_CHANGED_CHARACTERISTIC_UUID)
         }
 
@@ -127,9 +129,9 @@ class ZwiftAccessoryBleManager(context: Context, val typeByte: Byte) : BleManage
 
         val asyncValid = asyncCharacteristic != null && (asyncCharacteristic!!.properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY != 0)
         val syncTxValid = syncTxCharacteristic != null && (syncTxCharacteristic!!.properties and BluetoothGattCharacteristic.PROPERTY_INDICATE != 0)
-        val unknown6Valid = unknown6Characteristic != null && (unknown6Characteristic!!.properties and BluetoothGattCharacteristic.PROPERTY_INDICATE != 0)
+        val unknown6Valid = unknown6Characteristic != null && (unknown6Characteristic!!.properties and BluetoothGattCharacteristic.PROPERTY_INDICATE != 0)  || typeByte == KICKR
 
-        val batteryValid = batteryCharacteristic != null && (batteryCharacteristic!!.properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY != 0)
+        val batteryValid = batteryCharacteristic != null && (batteryCharacteristic!!.properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY != 0) || typeByte == KICKR
 
         return deviceNameCharacteristic != null && appearanceCharacteristic != null && serviceChangedValid
                 && manufacturerCharacteristic != null && serialCharacteristic != null
@@ -144,6 +146,7 @@ class ZwiftAccessoryBleManager(context: Context, val typeByte: Byte) : BleManage
         zapDevice = when (typeByte) {
             RC1_LEFT_SIDE, RC1_RIGHT_SIDE -> ZwiftPlayDevice()
             BC1 -> ZwiftClickDevice()
+            KICKR -> KickrCoreDevice()
             else -> throw Exception("Unknown device type")
         }
 
@@ -160,33 +163,44 @@ class ZwiftAccessoryBleManager(context: Context, val typeByte: Byte) : BleManage
         setIndicationCallback(syncTxCharacteristic).with { _, data ->
             zapDevice.processCharacteristic("SyncTx", data.value)
         }
-        setIndicationCallback(unknown6Characteristic).with { _, data ->
-            getHexStringValue(data)?.let {
-                Logger.d("6 $it")
+
+        if (unknown6Characteristic != null) {
+            setIndicationCallback(unknown6Characteristic).with { _, data ->
+                getHexStringValue(data)?.let {
+                    Logger.d("6 $it")
+                }
             }
         }
 
-        setNotificationCallback(batteryCharacteristic).with { _, data ->
-            batteryLevel = byteToInt(data)
+        if (batteryCharacteristic != null) {
+            setNotificationCallback(batteryCharacteristic).with { _, data ->
+                batteryLevel = byteToInt(data)
+            }
         }
 
-        beginAtomicRequestQueue()
+        val requestQueue = beginAtomicRequestQueue()
             .add(enableIndications(serviceChangedCharacteristic)
-                .fail { _: BluetoothDevice?, status: Int -> failCallback(serviceChangedCharacteristic!!, status) }
+                .fail { _: BluetoothDevice?, status: Int -> failCallback(serviceChangedCharacteristic, status) }
             )
             .add(enableNotifications(asyncCharacteristic)
-                .fail { _: BluetoothDevice?, status: Int -> failCallback(asyncCharacteristic!!, status) }
+                .fail { _: BluetoothDevice?, status: Int -> failCallback(asyncCharacteristic, status) }
             )
             .add(enableIndications(syncTxCharacteristic)
-                .fail { _: BluetoothDevice?, status: Int -> failCallback(syncTxCharacteristic!!, status) }
+                .fail { _: BluetoothDevice?, status: Int -> failCallback(syncTxCharacteristic, status) }
             )
-            .add(enableIndications(unknown6Characteristic)
-                .fail { _: BluetoothDevice?, status: Int -> failCallback(unknown6Characteristic!!, status) }
-            )
-            .add(enableNotifications(batteryCharacteristic)
-                .fail { _: BluetoothDevice?, status: Int -> failCallback(batteryCharacteristic!!, status) }
-            )
-            .add(readCharacteristic(deviceNameCharacteristic).with { _, data ->
+
+            if (unknown6Characteristic != null) {
+                requestQueue.add(enableIndications(unknown6Characteristic)
+                    .fail { _: BluetoothDevice?, status: Int -> failCallback(unknown6Characteristic, status) }
+                )
+            }
+            if (batteryCharacteristic != null) {
+                requestQueue.add(enableNotifications(batteryCharacteristic)
+                    .fail { _: BluetoothDevice?, status: Int -> failCallback(batteryCharacteristic, status) }
+                )
+            }
+
+            requestQueue.add(readCharacteristic(deviceNameCharacteristic).with { _, data ->
                 getStringValue(data)?.let {
                     Logger.d("Device Name: $it")
                 }
@@ -216,9 +230,6 @@ class ZwiftAccessoryBleManager(context: Context, val typeByte: Byte) : BleManage
                     Logger.d("Software: $it")
                 }
             })
-            .add(readCharacteristic(batteryCharacteristic).with { _, data ->
-                batteryLevel = byteToInt(data)
-            })
             .add(writeCharacteristic(syncRxCharacteristic, zapDevice.buildHandshakeStart(), WRITE_TYPE_DEFAULT).with { _, data ->
                 Logger.d("Written ${data.value?.toHexString()}")
             })
@@ -246,7 +257,10 @@ class ZwiftAccessoryBleManager(context: Context, val typeByte: Byte) : BleManage
 
     private fun byteToInt(data: Data) = data.getByte(0)?.toInt() ?: Int.MIN_VALUE
 
-    private fun failCallback(characteristic: BluetoothGattCharacteristic, status: Int) {
+    private fun failCallback(characteristic: BluetoothGattCharacteristic?, status: Int) {
+
+        if (characteristic == null) return
+
         Logger.e("Could not subscribe: ${characteristic.uuid} $status")
         disconnect().enqueue()
     }

@@ -1,4 +1,4 @@
-package com.che.zap.play
+package com.che.zap
 
 import com.che.zap.device.AbstractZapDevice
 import com.che.zap.device.ZapConstants.CONTROLLER_NOTIFICATION_MESSAGE_TYPE
@@ -28,3 +28,4 @@ class ZwiftPlayDevice : AbstractZapDevice() {
         lastButtonState = notification
     }
 }
+

@@ -1,4 +1,4 @@
-package com.che.zap.click
+package com.che.zap
 
 import com.che.zap.device.AbstractZapDevice
 import com.che.zap.device.ZapConstants.CLICK_NOTIFICATION_MESSAGE_TYPE
